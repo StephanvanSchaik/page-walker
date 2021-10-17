@@ -1,5 +1,8 @@
 # Introduction
 
+[![Crates.io](https://img.shields.io/crates/v/page-walker.svg)](https://crates.io/crates/page-walker)
+[![Docs](https://docs.rs/page-walker/badge.svg)](https://docs.rs/page-walker)
+
 This crate implements a generic page table walker in Rust, which can be used to either introspect
 or manage virtual address spaces on architectures that implement a Memory Management Unit (MMU)
 that traverses a hierarchy of page tables to translate virtual address into physical addresses and
