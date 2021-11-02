@@ -25,6 +25,12 @@
 //! only requires you to implement a [`PageTableMapper`] for mapping and unmapping page tables. The
 //! [`AddressSpace`] then simply offers you the functionality to retrieve and modify the PTEs of
 //! existing pages.
+//!
+//! In addition, when [`PageTableMapper::alloc_page`] and [`PageTableMapper::free_page`] are
+//! implemented, the full range of functionality can be used. More specifically, the
+//! [`AddressSpace`] provides functions to allocate and free pages for a given virtual address
+//! range, change the protection of a given virtual address range and allows mapping and unmapping
+//! a physical address range to a given virtual address range for memory-mapped I/O.
 
 #![no_std]
 #![deny(missing_docs, rustdoc::broken_intra_doc_links)]
