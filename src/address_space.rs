@@ -3,13 +3,8 @@
 
 use core::marker::PhantomData;
 use core::ops::Range;
-use crate::allocator::PteAllocator;
-use crate::mapper::PteMapper;
 use crate::PageFormat;
-use crate::protector::PteProtector;
-use crate::reader::PteReader;
-use crate::remover::{PteRemover, PteRemovalFlags};
-use crate::writer::PteWriter;
+use crate::walkers::*;
 use num_traits::{PrimInt, Unsigned};
 
 /// The [`AddressSpace`] struct expects a type implementing this trait in order to map the page
