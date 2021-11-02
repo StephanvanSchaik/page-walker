@@ -44,20 +44,23 @@ where
         self.mapper.map_table_mut(phys_addr)
     }
 
-    /// Store the PTE, if the virtual address resolves to a page.
+    /// Checks if the PTE points to a page that is present, and changes the protection flags if so.
     fn handle_pte(&mut self, pte_type: PteType, _range: Range<usize>, pte: &mut PTE) -> Result<(), Error> {
+        let physical_mask = self.format.physical_mask;
+
         if let PteType::Page(level) = pte_type {
-            let physical_mask = self.format.physical_mask;
             let level = &self.format.levels[level];
 
-            // Ensure the mask does not modify the physical address bits, the huge page bits or the
-            // present bits.
-            let clear_mask = self.mask.0 &
-                !(physical_mask | level.huge_page_bit.0 | level.present_bit.0);
-            let set_mask   = self.mask.1 &
-                !(physical_mask | level.huge_page_bit.0 | level.present_bit.0);
+            if level.is_present(*pte) {
+                // Ensure the mask does not modify the physical address bits, the huge page bits or the
+                // present bits.
+                let clear_mask = self.mask.0 &
+                    !(physical_mask | level.huge_page_bit.0 | level.present_bit.0);
+                let set_mask   = self.mask.1 &
+                    !(physical_mask | level.huge_page_bit.0 | level.present_bit.0);
 
-            *pte = (*pte & !clear_mask) | set_mask;
+                *pte = (*pte & !clear_mask) | set_mask;
+            }
         }
 
         Ok(())
