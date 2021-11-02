@@ -1,4 +1,4 @@
-//! This modules implements the [`PteRemove`] struct which is a helper used to remove the pages and
+//! This modules implements the [`PteRemover`] struct which is a helper used to remove the pages and
 //! the underlying page tables for a given range of virtual addresses.
 
 use bitflags::bitflags;
@@ -9,8 +9,8 @@ use crate::{PageFormat, PteType};
 use num_traits::{PrimInt, Unsigned};
 
 bitflags! {
-    /// Flags to configure the behavior of the `[PteRemove`] walker.
-    pub(crate) struct PteRemoveFlags: u32 {
+    /// Flags to configure the behavior of the `[PteRemover`] walker.
+    pub(crate) struct PteRemovalFlags: u32 {
         /// Free the pages.
         const FREE_PAGES       = 1 << 0;
 
@@ -19,10 +19,10 @@ bitflags! {
     }
 }
 
-/// The [`PteRemove`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
+/// The [`PteRemover`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
 /// remove pages and the underlying page tables for a given virtual address range. This is used by
-/// the [`AddressSpace::remove_range`] method.
-pub(crate) struct PteRemove<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+/// the [`AddressSpace::unmap_range`] and [`AddressSpace::remove_range`] methods.
+pub(crate) struct PteRemover<'a, PTE, PageTable, PageTableMut, Mapper, Error>
 where
     PTE: PrimInt + Unsigned,
     PageTable: crate::PageTable<PTE>,
@@ -32,7 +32,7 @@ where
     /// The page table mapper.
     pub(crate) mapper: &'a Mapper,
     /// Flags to configure the behavior.
-    pub(crate) flags: PteRemoveFlags,
+    pub(crate) flags: PteRemovalFlags,
     /// The page format.
     pub(crate) format: &'a PageFormat<'a, PTE>,
     /// A marker for PageTable.
@@ -43,7 +43,7 @@ where
     pub(crate) error: PhantomData<Error>,
 }
 
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteRemove<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteRemover<'a, PTE, PageTable, PageTableMut, Mapper, Error>
 where
     PTE: PrimInt + Unsigned,
     PageTable: crate::PageTable<PTE>,
@@ -64,7 +64,7 @@ where
 
             if level.is_present(*pte) {
                 // Free the page and mark the PTE as non-present.
-                if self.flags.contains(PteRemoveFlags::FREE_PAGES) {
+                if self.flags.contains(PteRemovalFlags::FREE_PAGES) {
                     self.mapper.free_page(physical_mask & *pte);
                 }
 
@@ -95,7 +95,7 @@ where
         // Free the page table.
         drop(page_table);
 
-        if self.flags.contains(PteRemoveFlags::FREE_PAGE_TABLES) {
+        if self.flags.contains(PteRemovalFlags::FREE_PAGE_TABLES) {
             self.mapper.free_page(physical_mask & *pte);
         }
 

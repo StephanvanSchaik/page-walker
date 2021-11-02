@@ -5,9 +5,9 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use crate::allocator::PteAllocator;
 use crate::PageFormat;
-use crate::protect::PteProtect;
+use crate::protector::PteProtector;
 use crate::reader::PteReader;
-use crate::remove::{PteRemove, PteRemoveFlags};
+use crate::remover::{PteRemover, PteRemovalFlags};
 use crate::writer::PteWriter;
 use num_traits::{PrimInt, Unsigned};
 
@@ -92,7 +92,7 @@ where
 
     /// Reads the PTE for the given the virtual address if the virtual address is valid.
     pub fn read_pte(&self, virt_addr: usize) -> Result<PTE, Error> {
-        let mut reader = PteReader {
+        let mut walker = PteReader {
             mapper: &self.mapper,
             pte: None,
             page_table: PhantomData,
@@ -100,9 +100,9 @@ where
             error: PhantomData,
         };
 
-        self.format.walk(self.root, virt_addr..virt_addr + 1, &mut reader)?;
+        self.format.walk(self.root, virt_addr..virt_addr + 1, &mut walker)?;
 
-        match reader.pte {
+        match walker.pte {
             Some(pte) => Ok(pte),
             _ => Err(Mapper::PTE_NOT_FOUND),
         }
@@ -110,7 +110,7 @@ where
 
     /// Writes the PTE for the given virtual address if the virtual address is valid.
     pub fn write_pte(&self, virt_addr: usize, pte: PTE) -> Result<(), Error> {
-        let mut writer = PteWriter {
+        let mut walker = PteWriter {
             mapper: &self.mapper,
             pte,
             page_table: PhantomData,
@@ -118,7 +118,7 @@ where
             error: PhantomData,
         };
 
-        self.format.walk_mut(self.root, virt_addr..virt_addr + 1, &mut writer)?;
+        self.format.walk_mut(self.root, virt_addr..virt_addr + 1, &mut walker)?;
 
         Ok(())
     }
@@ -144,7 +144,7 @@ where
     /// mask specifies the full mask to clear the bits. The second mask specifies the bits that
     /// should be set.
     pub fn protect_range(&self, range: Range<usize>, mask: (PTE, PTE)) -> Result<(), Error> {
-        let mut protect = PteProtect {
+        let mut walker = PteProtector {
             mapper: &self.mapper,
             mask,
             format: &self.format,
@@ -153,7 +153,7 @@ where
             error: PhantomData,
         };
 
-        self.format.walk_mut(self.root, range, &mut protect)?;
+        self.format.walk_mut(self.root, range, &mut walker)?;
 
         Ok(())
     }
@@ -161,9 +161,9 @@ where
     /// Frees the pages for the given range in the virtual address space. If the underlying page
     /// tables have been cleared, then this function also free the underlying page tables.
     pub fn free_range(&self, range: Range<usize>) -> Result<(), Error> {
-        let flags = PteRemoveFlags::empty();
+        let flags = PteRemovalFlags::empty();
 
-        let mut walker = PteRemove {
+        let mut walker = PteRemover {
             mapper: &self.mapper,
             flags,
             format: &self.format,
@@ -180,9 +180,9 @@ where
     /// Unmaps the pages for the given range in the virtual address space without freeing the
     /// underlying pages. This is useful for memory-mapped I/O.
     pub fn unmap_range(&self, range: Range<usize>) -> Result<(), Error> {
-        let flags = PteRemoveFlags::all();
+        let flags = PteRemovalFlags::all();
 
-        let mut walker = PteRemove {
+        let mut walker = PteRemover {
             mapper: &self.mapper,
             flags,
             format: &self.format,

@@ -1,4 +1,4 @@
-//! This modules implements the [`PteProtect`] struct which is a helper used to change the
+//! This modules implements the [`PteProtector`] struct which is a helper used to change the
 //! protection flags for a given range of virtual addresses.
 
 use core::marker::PhantomData;
@@ -7,10 +7,10 @@ use crate::address_space::PageTableMapper;
 use crate::{PageFormat, PteType};
 use num_traits::{PrimInt, Unsigned};
 
-/// The [`PteProtect`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
-/// change the protection flags of a given virtual address range, which is used by the
+/// The [`PteProtector`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
+/// change the protection flags of a given virtual address range. This function is used by the
 /// [`AddressSpace::protect_range`] method.
-pub(crate) struct PteProtect<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+pub(crate) struct PteProtector<'a, PTE, PageTable, PageTableMut, Mapper, Error>
 where
     PTE: PrimInt + Unsigned,
     PageTable: crate::PageTable<PTE>,
@@ -32,7 +32,7 @@ where
     pub(crate) error: PhantomData<Error>,
 }
 
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteProtect<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteProtector<'a, PTE, PageTable, PageTableMut, Mapper, Error>
 where
     PTE: PrimInt + Unsigned,
     PageTable: crate::PageTable<PTE>,
