@@ -33,6 +33,7 @@ pub mod address_space;
 pub mod arch;
 pub mod format;
 pub mod level;
+pub mod protect;
 pub mod reader;
 pub mod table;
 pub mod walker;

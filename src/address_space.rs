@@ -3,6 +3,8 @@
 
 use core::marker::PhantomData;
 use core::ops::Range;
+use crate::PageFormat;
+use crate::protect::PteProtect;
 use crate::reader::PteReader;
 use crate::writer::PteWriter;
 use num_traits::{PrimInt, Unsigned};
@@ -106,6 +108,24 @@ where
         };
 
         self.format.walk_mut(self.root, virt_addr..virt_addr + 1, &mut writer)?;
+
+        Ok(())
+    }
+
+    /// Changes the protection flags of the given range in the virtual address space. The first
+    /// mask specifies the full mask to clear the bits. The second mask specifies the bits that
+    /// should be set.
+    pub fn protect_range(&self, range: Range<usize>, mask: (PTE, PTE)) -> Result<(), Error> {
+        let mut protect = PteProtect {
+            mapper: &self.mapper,
+            mask,
+            format: &self.format,
+            page_table: PhantomData,
+            page_table_mut: PhantomData,
+            error: PhantomData,
+        };
+
+        self.format.walk_mut(self.root, range, &mut protect)?;
 
         Ok(())
     }
