@@ -73,4 +73,9 @@ where
             false
         }
     }
+
+    /// Returns the bits to set for a PTE referring to a page table.
+    pub fn page_table_mask(&self) -> PTE {
+        PTE::zero()
+    }
 }

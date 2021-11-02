@@ -3,6 +3,7 @@
 
 use core::marker::PhantomData;
 use core::ops::Range;
+use crate::allocator::PteAllocator;
 use crate::PageFormat;
 use crate::protect::PteProtect;
 use crate::reader::PteReader;
@@ -118,6 +119,23 @@ where
         };
 
         self.format.walk_mut(self.root, virt_addr..virt_addr + 1, &mut writer)?;
+
+        Ok(())
+    }
+
+    /// Allocates pages and the underlying page tables for a given range in the virtual address
+    /// space range.
+    pub fn allocate_range(&self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
+        let mut walker = PteAllocator {
+            mapper: &self.mapper,
+            mask: Some(mask),
+            format: &self.format,
+            page_table: PhantomData,
+            page_table_mut: PhantomData,
+            error: PhantomData,
+        };
+
+        self.format.walk_mut(self.root, range, &mut walker)?;
 
         Ok(())
     }

@@ -30,6 +30,7 @@
 #![deny(missing_docs, rustdoc::broken_intra_doc_links)]
 
 pub mod address_space;
+pub mod allocator;
 pub mod arch;
 pub mod format;
 pub mod level;
