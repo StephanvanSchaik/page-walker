@@ -35,6 +35,7 @@ pub mod format;
 pub mod level;
 pub mod protect;
 pub mod reader;
+pub mod remove;
 pub mod table;
 pub mod walker;
 pub mod writer;
