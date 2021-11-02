@@ -29,6 +29,15 @@ where
     /// page upon use, the type implementing [`crate::table::PageTableMut`] must implement
     /// [`core::ops::Drop`] semantics.
     fn map_table_mut(&self, phys_addr: PTE) -> Result<PageTableMut, Error>;
+
+    /// Allocates a physical page.
+    fn alloc_page(&self) -> Option<PTE> {
+        None
+    }
+
+    /// Frees a physical page.
+    fn free_page(&self, _pte: PTE) {
+    }
 }
 
 /// Abstracts a virtual address space.
