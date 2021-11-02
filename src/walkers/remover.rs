@@ -33,7 +33,7 @@ where
     Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
 {
     /// The page table mapper.
-    pub mapper: &'a Mapper,
+    pub mapper: &'a mut Mapper,
     /// Flags to configure the behavior.
     pub flags: PteRemovalFlags,
     /// The page format.

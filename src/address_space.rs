@@ -29,12 +29,12 @@ where
     fn map_table_mut(&self, phys_addr: PTE) -> Result<PageTableMut, Error>;
 
     /// Allocates a physical page.
-    fn alloc_page(&self) -> Option<PTE> {
+    fn alloc_page(&mut self) -> Option<PTE> {
         None
     }
 
     /// Frees a physical page.
-    fn free_page(&self, _pte: PTE) {
+    fn free_page(&mut self, _pte: PTE) {
     }
 }
 
@@ -121,9 +121,9 @@ where
 
     /// Allocates pages and the underlying page tables for a given range in the virtual address
     /// space. The pages are protected using the given mask.
-    pub fn allocate_range(&self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
+    pub fn allocate_range(&mut self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
         let mut walker = PteAllocator {
-            mapper: &self.mapper,
+            mapper: &mut self.mapper,
             mask: Some(mask),
             format: &self.format,
             page_table: PhantomData,
@@ -139,9 +139,9 @@ where
     /// Maps the given range in the virtual address space range to the given physical address
     /// offset and mask. Allocates the underlying page tables if they are missing. This is useful
     /// for memory-mapped I/O.
-    pub fn map_range(&self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
+    pub fn map_range(&mut self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
         let mut walker = PteMapper {
-            mapper: &self.mapper,
+            mapper: &mut self.mapper,
             mask,
             format: &self.format,
             page_table: PhantomData,
@@ -174,11 +174,11 @@ where
 
     /// Frees the pages for the given range in the virtual address space. If the underlying page
     /// tables have been cleared, then this function also free the underlying page tables.
-    pub fn free_range(&self, range: Range<usize>) -> Result<(), Error> {
+    pub fn free_range(&mut self, range: Range<usize>) -> Result<(), Error> {
         let flags = PteRemovalFlags::empty();
 
         let mut walker = PteRemover {
-            mapper: &self.mapper,
+            mapper: &mut self.mapper,
             flags,
             format: &self.format,
             page_table: PhantomData,
@@ -193,11 +193,11 @@ where
 
     /// Unmaps the pages for the given range in the virtual address space without freeing the
     /// underlying pages. This is useful for memory-mapped I/O.
-    pub fn unmap_range(&self, range: Range<usize>) -> Result<(), Error> {
+    pub fn unmap_range(&mut self, range: Range<usize>) -> Result<(), Error> {
         let flags = PteRemovalFlags::all();
 
         let mut walker = PteRemover {
-            mapper: &self.mapper,
+            mapper: &mut self.mapper,
             flags,
             format: &self.format,
             page_table: PhantomData,

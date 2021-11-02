@@ -20,7 +20,7 @@ where
     Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
 {
     /// The page table mapper.
-    pub mapper: &'a Mapper,
+    pub mapper: &'a mut Mapper,
     /// The page format.
     pub format: &'a PageFormat<'a, PTE>,
     /// The mask to set for pages.
