@@ -12,7 +12,7 @@ lazy_static! {
             PageLevel {
                 shift_bits: 12,
                 va_bits: 8,
-                present_bit: (1 << 0, 1 << 0),
+                present_bit: (1 << 0 | 1 << 1, 1 << 0 | 1 << 1),
                 huge_page_bit: (0, 0),
                 page_table_mask: 0,
             },
@@ -38,7 +38,7 @@ lazy_static! {
             PageLevel {
                 shift_bits: 12,
                 va_bits: 9,
-                present_bit: (1 << 0, 1 << 0),
+                present_bit: (1 << 0 | 1 << 1, 1 << 0 | 1 << 1),
                 huge_page_bit: (0, 0),
                 page_table_mask: 0,
             },
