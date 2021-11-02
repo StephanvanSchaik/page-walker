@@ -140,9 +140,9 @@ where
         Ok(())
     }
 
-    /// Removes the pages for the given range in the virtual address space. If the underlying page
-    /// tables have been cleared, then this function also removes the underlying page tables.
-    pub fn remove_range(&self, range: Range<usize>) -> Result<(), Error> {
+    /// Frees the pages for the given range in the virtual address space. If the underlying page
+    /// tables have been cleared, then this function also free the underlying page tables.
+    pub fn free_range(&self, range: Range<usize>) -> Result<(), Error> {
         let flags = PteRemoveFlags::empty();
 
         let mut walker = PteRemove {
