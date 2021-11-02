@@ -10,7 +10,9 @@ use num_traits::{PrimInt, Unsigned};
 /// The [`PteWriter`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
 /// store the PTE for a given virtual address, which is used by the [`AddressSpace::write_pte`]
 /// method.
-pub(crate) struct PteWriter<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+///
+/// [`AddressSpace::write_pte`]: `super::super::AddressSpace::write_pte`
+pub struct PteWriter<'a, PTE, PageTable, PageTableMut, Mapper, Error>
 where
     PTE: PrimInt + Unsigned,
     PageTable: crate::PageTable<PTE>,
@@ -18,15 +20,15 @@ where
     Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
 {
     /// The page table mapper.
-    pub(crate) mapper: &'a Mapper,
+    pub mapper: &'a Mapper,
     /// The PTE to store.
-    pub(crate) pte: PTE,
+    pub pte: PTE,
     /// A marker for PageTable.
-    pub(crate) page_table: PhantomData<PageTable>,
+    pub page_table: PhantomData<PageTable>,
     /// A marker for PageTableMut.
-    pub(crate) page_table_mut: PhantomData<PageTableMut>,
+    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
-    pub(crate) error: PhantomData<Error>,
+    pub error: PhantomData<Error>,
 }
 
 impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteWriter<'a, PTE, PageTable, PageTableMut, Mapper, Error>

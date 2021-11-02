@@ -1,4 +1,6 @@
 //! This module provides various walkers to help with managing the [`AddressSpace`].
+//!
+//! [`AddressSpace`]: `super::AddressSpace`
 
 pub mod allocator;
 pub mod mapper;
@@ -7,9 +9,9 @@ pub mod reader;
 pub mod remover;
 pub mod writer;
 
-pub(crate) use allocator::PteAllocator;
-pub(crate) use mapper::PteMapper;
-pub(crate) use protector::PteProtector;
-pub(crate) use reader::PteReader;
-pub(crate) use remover::{PteRemovalFlags, PteRemover};
-pub(crate) use writer::PteWriter;
+pub use allocator::PteAllocator;
+pub use mapper::PteMapper;
+pub use protector::PteProtector;
+pub use reader::PteReader;
+pub use remover::{PteRemovalFlags, PteRemover};
+pub use writer::PteWriter;

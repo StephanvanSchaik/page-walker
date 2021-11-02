@@ -10,7 +10,9 @@ use num_traits::{PrimInt, Unsigned};
 /// The [`PteProtector`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
 /// change the protection flags of a given virtual address range. This function is used by the
 /// [`AddressSpace::protect_range`] method.
-pub(crate) struct PteProtector<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+///
+/// [`AddressSpace::protect_range`]: `super::super::AddressSpace::protect_range`
+pub struct PteProtector<'a, PTE, PageTable, PageTableMut, Mapper, Error>
 where
     PTE: PrimInt + Unsigned,
     PageTable: crate::PageTable<PTE>,
@@ -18,18 +20,18 @@ where
     Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
 {
     /// The page table mapper.
-    pub(crate) mapper: &'a Mapper,
+    pub mapper: &'a Mapper,
     /// The protection flags that should be set. The first mask is the mask of bits that should be
     /// cleared. The second mask is the mask of bits that should be set.
-    pub(crate) mask: (PTE, PTE),
+    pub mask: (PTE, PTE),
     /// The page format.
-    pub(crate) format: &'a PageFormat<'a, PTE>,
+    pub format: &'a PageFormat<'a, PTE>,
     /// A marker for PageTable.
-    pub(crate) page_table: PhantomData<PageTable>,
+    pub page_table: PhantomData<PageTable>,
     /// A marker for PageTableMut.
-    pub(crate) page_table_mut: PhantomData<PageTableMut>,
+    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
-    pub(crate) error: PhantomData<Error>,
+    pub error: PhantomData<Error>,
 }
 
 impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteProtector<'a, PTE, PageTable, PageTableMut, Mapper, Error>

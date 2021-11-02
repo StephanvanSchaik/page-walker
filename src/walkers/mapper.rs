@@ -1,5 +1,5 @@
-//! This modules implements the [`PteAllocate`] struct which is a helper used to allocate the pages
-//! and the underlying page tables for a given range of virtual addresses.
+//! This modules implements the [`PteMapper`] struct which is a helper used to map a physical
+//! address range and allocate the underlying page tables for a given virtual address range.
 
 use core::marker::PhantomData;
 use core::ops::Range;
@@ -10,7 +10,9 @@ use num_traits::{PrimInt, Unsigned};
 /// The [`PteMapper`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to map
 /// a physical address range and allocate the underlying page tables for a given virtual address
 /// range. This is used by the [`AddressSpace::map_range`] method.
-pub(crate) struct PteMapper<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+///
+/// [`AddressSpace::map_range`]: `super::super::AddressSpace::map_range`
+pub struct PteMapper<'a, PTE, PageTable, PageTableMut, Mapper, Error>
 where
     PTE: PrimInt + Unsigned,
     PageTable: crate::PageTable<PTE>,
@@ -18,17 +20,17 @@ where
     Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
 {
     /// The page table mapper.
-    pub(crate) mapper: &'a Mapper,
+    pub mapper: &'a Mapper,
     /// The page format.
-    pub(crate) format: &'a PageFormat<'a, PTE>,
+    pub format: &'a PageFormat<'a, PTE>,
     /// The mask to set for pages.
-    pub(crate) mask: PTE,
+    pub mask: PTE,
     /// A marker for PageTable.
-    pub(crate) page_table: PhantomData<PageTable>,
+    pub page_table: PhantomData<PageTable>,
     /// A marker for PageTableMut.
-    pub(crate) page_table_mut: PhantomData<PageTableMut>,
+    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
-    pub(crate) error: PhantomData<Error>,
+    pub error: PhantomData<Error>,
 }
 
 impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteMapper<'a, PTE, PageTable, PageTableMut, Mapper, Error>

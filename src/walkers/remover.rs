@@ -10,7 +10,7 @@ use num_traits::{PrimInt, Unsigned};
 
 bitflags! {
     /// Flags to configure the behavior of the `[PteRemover`] walker.
-    pub(crate) struct PteRemovalFlags: u32 {
+    pub struct PteRemovalFlags: u32 {
         /// Free the pages.
         const FREE_PAGES       = 1 << 0;
 
@@ -21,8 +21,11 @@ bitflags! {
 
 /// The [`PteRemover`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
 /// remove pages and the underlying page tables for a given virtual address range. This is used by
-/// the [`AddressSpace::unmap_range`] and [`AddressSpace::remove_range`] methods.
-pub(crate) struct PteRemover<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+/// the [`AddressSpace::unmap_range`] and [`AddressSpace::free_range`] methods.
+///
+/// [`AddressSpace::unmap_range`]: `super::super::AddressSpace::unmap_range`
+/// [`AddressSpace::free_range`]: `super::super::AddressSpace::free_range`
+pub struct PteRemover<'a, PTE, PageTable, PageTableMut, Mapper, Error>
 where
     PTE: PrimInt + Unsigned,
     PageTable: crate::PageTable<PTE>,
@@ -30,17 +33,17 @@ where
     Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
 {
     /// The page table mapper.
-    pub(crate) mapper: &'a Mapper,
+    pub mapper: &'a Mapper,
     /// Flags to configure the behavior.
-    pub(crate) flags: PteRemovalFlags,
+    pub flags: PteRemovalFlags,
     /// The page format.
-    pub(crate) format: &'a PageFormat<'a, PTE>,
+    pub format: &'a PageFormat<'a, PTE>,
     /// A marker for PageTable.
-    pub(crate) page_table: PhantomData<PageTable>,
+    pub page_table: PhantomData<PageTable>,
     /// A marker for PageTableMut.
-    pub(crate) page_table_mut: PhantomData<PageTableMut>,
+    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
-    pub(crate) error: PhantomData<Error>,
+    pub error: PhantomData<Error>,
 }
 
 impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteRemover<'a, PTE, PageTable, PageTableMut, Mapper, Error>
