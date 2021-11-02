@@ -21,6 +21,8 @@ where
     /// this should be set to zero. The first mask is to select the relevant bits, the second is
     /// what the value should be upon masking.
     pub huge_page_bit: (PTE, PTE),
+    /// The page table mask that should be set when allocating new page tables.
+    pub page_table_mask: PTE,
 }
 
 impl<PTE> PageLevel<PTE>
@@ -72,10 +74,5 @@ where
         } else {
             false
         }
-    }
-
-    /// Returns the bits to set for a PTE referring to a page table.
-    pub fn page_table_mask(&self) -> PTE {
-        PTE::zero()
     }
 }

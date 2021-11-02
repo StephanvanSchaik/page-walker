@@ -58,7 +58,7 @@ where
             }
             _ => {
                 if let Some(page_table) = self.mapper.alloc_page() {
-                    *pte = page_table | level.page_table_mask();
+                    *pte = page_table | level.page_table_mask;
                 }
             }
         }

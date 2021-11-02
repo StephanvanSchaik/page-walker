@@ -2,6 +2,15 @@
 use lazy_static::lazy_static;
 use crate::{PageFormat, PageLevel};
 
+/// The page is present.
+pub const PAGE_PRESENT: u32 = 1 << 0;
+/// The page is writeable.
+pub const PAGE_WRITE:   u32 = 1 << 1;
+/// The page is accessible in user mode.
+pub const PAGE_USER:    u32 = 1 << 2;
+/// The page is a huge page.
+pub const PAGE_HUGE:    u32 = 1 << 7;
+
 lazy_static! {
     /// A page table layout for x86 consisting of two page levels with 32-bit PTEs and a page
     /// size of 4K. Therefore, each page table has 1024 entries and uses 10 bits of the virtual
@@ -11,14 +20,16 @@ lazy_static! {
             PageLevel {
                 shift_bits: 12,
                 va_bits: 10,
-                present_bit: (1 << 0, 1 << 0),
+                present_bit: (PAGE_PRESENT, PAGE_PRESENT),
                 huge_page_bit: (0, 0),
+                page_table_mask: 0,
             },
             PageLevel {
                 shift_bits: 22,
                 va_bits: 10,
-                present_bit: (1 << 0, 1 << 0),
-                huge_page_bit: (1 << 7, 1 << 7),
+                present_bit: (PAGE_PRESENT, PAGE_PRESENT),
+                huge_page_bit: (PAGE_HUGE, PAGE_HUGE),
+                page_table_mask: PAGE_PRESENT | PAGE_WRITE | PAGE_USER,
             },
         ],
         physical_mask: 0xffff_f000,
@@ -34,20 +45,23 @@ lazy_static! {
             PageLevel {
                 shift_bits: 12,
                 va_bits: 9,
-                present_bit: (1 << 0, 1 << 0),
+                present_bit: (PAGE_PRESENT as u64, PAGE_PRESENT as u64),
                 huge_page_bit: (0, 0),
+                page_table_mask: 0,
             },
             PageLevel {
                 shift_bits: 21,
                 va_bits: 9,
-                present_bit: (1 << 0, 1 << 0),
-                huge_page_bit: (1 << 7, 1 << 7),
+                present_bit: (PAGE_PRESENT as u64, PAGE_PRESENT as u64),
+                huge_page_bit: (PAGE_HUGE as u64, PAGE_HUGE as u64),
+                page_table_mask: (PAGE_PRESENT | PAGE_WRITE | PAGE_USER) as u64,
             },
             PageLevel {
                 shift_bits: 30,
                 va_bits: 2,
-                present_bit: (1 << 0, 1 << 0),
+                present_bit: (PAGE_PRESENT as u64, PAGE_PRESENT as u64),
                 huge_page_bit: (0, 0),
+                page_table_mask: (PAGE_PRESENT | PAGE_WRITE | PAGE_USER) as u64,
             },
         ],
         physical_mask: 0x000f_ffff_ffff_f000,

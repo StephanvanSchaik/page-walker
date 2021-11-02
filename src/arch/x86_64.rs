@@ -2,39 +2,53 @@
 use lazy_static::lazy_static;
 use crate::{PageFormat, PageLevel};
 
+/// The page is present.
+pub const PAGE_PRESENT: u64 = 1 << 0;
+/// The page is writeable.
+pub const PAGE_WRITE:   u64 = 1 << 1;
+/// The page is accessible in user mode.
+pub const PAGE_USER:    u64 = 1 << 2;
+/// The page is a huge page.
+pub const PAGE_HUGE:    u64 = 1 << 7;
+
+
 static PAGE_LEVELS_4K: &'static [PageLevel<u64>] = &[
     PageLevel {
         shift_bits: 12,
         va_bits: 9,
-        present_bit: (1 << 0, 1 << 0),
-        huge_page_bit: (0, 0)
+        present_bit: (PAGE_PRESENT, PAGE_PRESENT),
+        huge_page_bit: (0, 0),
+        page_table_mask: 0,
     },
     PageLevel {
         shift_bits: 21,
         va_bits: 9,
-        present_bit: (1 << 0, 1 << 0),
-        huge_page_bit: (1 << 7, 1 << 7),
+        present_bit: (PAGE_PRESENT, PAGE_PRESENT),
+        huge_page_bit: (PAGE_HUGE, PAGE_HUGE),
+        page_table_mask: PAGE_PRESENT | PAGE_WRITE | PAGE_USER,
     },
     PageLevel {
         shift_bits: 30,
         va_bits: 9,
-        present_bit: (1 << 0, 1 << 0),
-        huge_page_bit: (1 << 7, 1 << 7),
+        present_bit: (PAGE_PRESENT, PAGE_PRESENT),
+        huge_page_bit: (PAGE_HUGE, PAGE_HUGE),
+        page_table_mask: PAGE_PRESENT | PAGE_WRITE | PAGE_USER,
     },
     PageLevel {
         shift_bits: 39,
         va_bits: 9,
-        present_bit: (1 << 0, 1 << 0),
+        present_bit: (PAGE_PRESENT, PAGE_PRESENT),
         huge_page_bit: (0, 0),
+        page_table_mask: PAGE_PRESENT | PAGE_WRITE | PAGE_USER,
     },
     PageLevel {
         shift_bits: 48,
         va_bits: 9,
-        present_bit: (1 << 0, 1 << 0),
+        present_bit: (PAGE_PRESENT, PAGE_PRESENT),
         huge_page_bit: (0, 0),
+        page_table_mask: PAGE_PRESENT | PAGE_WRITE | PAGE_USER,
     },
 ];
-
 
 lazy_static! {
     /// A page table layout for x86-64 consisting of four page levels with 64-bit PTEs and a page
