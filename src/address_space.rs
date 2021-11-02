@@ -4,6 +4,7 @@
 use core::marker::PhantomData;
 use core::ops::Range;
 use crate::allocator::PteAllocator;
+use crate::mapper::PteMapper;
 use crate::PageFormat;
 use crate::protector::PteProtector;
 use crate::reader::PteReader;
@@ -124,11 +125,29 @@ where
     }
 
     /// Allocates pages and the underlying page tables for a given range in the virtual address
-    /// space range.
+    /// space. The pages are protected using the given mask.
     pub fn allocate_range(&self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
         let mut walker = PteAllocator {
             mapper: &self.mapper,
             mask: Some(mask),
+            format: &self.format,
+            page_table: PhantomData,
+            page_table_mut: PhantomData,
+            error: PhantomData,
+        };
+
+        self.format.walk_mut(self.root, range, &mut walker)?;
+
+        Ok(())
+    }
+
+    /// Maps the given range in the virtual address space range to the given physical address
+    /// offset and mask. Allocates the underlying page tables if they are missing. This is useful
+    /// for memory-mapped I/O.
+    pub fn map_range(&self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
+        let mut walker = PteMapper {
+            mapper: &self.mapper,
+            mask,
             format: &self.format,
             page_table: PhantomData,
             page_table_mut: PhantomData,

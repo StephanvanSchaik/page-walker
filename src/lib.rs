@@ -34,6 +34,7 @@ pub mod allocator;
 pub mod arch;
 pub mod format;
 pub mod level;
+pub mod mapper;
 pub mod protector;
 pub mod reader;
 pub mod remover;
