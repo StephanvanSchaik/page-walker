@@ -3,7 +3,8 @@
 
 use core::marker::PhantomData;
 use core::ops::Range;
-use crate::{PageFormat, PteType};
+use crate::reader::PteReader;
+use crate::writer::PteWriter;
 use num_traits::{PrimInt, Unsigned};
 
 /// The [`AddressSpace`] struct expects a type implementing this trait in order to map the page
@@ -26,94 +27,6 @@ where
     /// page upon use, the type implementing [`crate::table::PageTableMut`] must implement
     /// [`core::ops::Drop`] semantics.
     fn map_table_mut(&self, phys_addr: PTE) -> Result<PageTableMut, Error>;
-}
-
-/// The [`PteReader`] struct is an implementation of a [`crate::walker::PageWalker`] used to
-/// retrieve the PTE for a given virtual address, which is used by the [`AddressSpace::read_pte`]
-/// method.
-struct PteReader<'a, PTE, PageTable, PageTableMut, Mapper, Error>
-where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
-{
-    /// The page table mapper.
-    mapper: &'a Mapper,
-    /// Storage for the retrieved PTE.
-    pte: Option<PTE>,
-    /// A marker for PageTable.
-    page_table: PhantomData<PageTable>,
-    /// A marker for PageTableMut.
-    page_table_mut: PhantomData<PageTableMut>,
-    /// A marker for Error.
-    error: PhantomData<Error>,
-}
-
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalker<PTE, PageTable, Error> for PteReader<'a, PTE, PageTable, PageTableMut, Mapper, Error>
-where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
-{
-    /// Uses the page table mapper to map the page table backing the physical address.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTable, Error> {
-        self.mapper.map_table(phys_addr)
-    }
-
-    /// Stores the PTE of the page, if the virtual address resolves to a page.
-    fn handle_pte(&mut self, pte_type: PteType, _range: Range<usize>, pte: &PTE) -> Result<(), Error> {
-        if pte_type.is_page() {
-            self.pte = Some(*pte);
-        }
-
-        Ok(())
-    }
-}
-
-/// The [`PteWriter`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
-/// store the PTE for a given virtual address, which is used by the [`AddressSpace::write_pte`]
-/// method.
-struct PteWriter<'a, PTE, PageTable, PageTableMut, Mapper, Error>
-where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
-{
-    /// The page table mapper.
-    mapper: &'a Mapper,
-    /// The PTE to store.
-    pte: PTE,
-    /// A marker for PageTable.
-    page_table: PhantomData<PageTable>,
-    /// A marker for PageTableMut.
-    page_table_mut: PhantomData<PageTableMut>,
-    /// A marker for Error.
-    error: PhantomData<Error>,
-}
-
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteWriter<'a, PTE, PageTable, PageTableMut, Mapper, Error>
-where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
-{
-    /// Uses the page table mapper to map the page table backing the physical address.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTableMut, Error> {
-        self.mapper.map_table_mut(phys_addr)
-    }
-
-    /// Store the PTE, if the virtual address resolves to a page.
-    fn handle_pte(&mut self, pte_type: PteType, _range: Range<usize>, pte: &mut PTE) -> Result<(), Error> {
-        if let PteType::Page(_) = pte_type {
-            *pte = self.pte;
-        }
-
-        Ok(())
-    }
 }
 
 /// Abstracts a virtual address space.
