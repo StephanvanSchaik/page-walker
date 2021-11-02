@@ -6,7 +6,7 @@ use core::ops::Range;
 use crate::PageFormat;
 use crate::protect::PteProtect;
 use crate::reader::PteReader;
-use crate::remove::PteRemove;
+use crate::remove::{PteRemove, PteRemoveFlags};
 use crate::writer::PteWriter;
 use num_traits::{PrimInt, Unsigned};
 
@@ -143,8 +143,30 @@ where
     /// Removes the pages for the given range in the virtual address space. If the underlying page
     /// tables have been cleared, then this function also removes the underlying page tables.
     pub fn remove_range(&self, range: Range<usize>) -> Result<(), Error> {
+        let flags = PteRemoveFlags::empty();
+
         let mut walker = PteRemove {
             mapper: &self.mapper,
+            flags,
+            format: &self.format,
+            page_table: PhantomData,
+            page_table_mut: PhantomData,
+            error: PhantomData,
+        };
+
+        self.format.walk_mut(self.root, range, &mut walker)?;
+
+        Ok(())
+    }
+
+    /// Unmaps the pages for the given range in the virtual address space without freeing the
+    /// underlying pages. This is useful for memory-mapped I/O.
+    pub fn unmap_range(&self, range: Range<usize>) -> Result<(), Error> {
+        let flags = PteRemoveFlags::all();
+
+        let mut walker = PteRemove {
+            mapper: &self.mapper,
+            flags,
             format: &self.format,
             page_table: PhantomData,
             page_table_mut: PhantomData,

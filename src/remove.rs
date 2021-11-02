@@ -1,11 +1,23 @@
 //! This modules implements the [`PteRemove`] struct which is a helper used to remove the pages and
 //! the underlying page tables for a given range of virtual addresses.
 
+use bitflags::bitflags;
 use core::marker::PhantomData;
 use core::ops::Range;
 use crate::address_space::PageTableMapper;
 use crate::{PageFormat, PteType};
 use num_traits::{PrimInt, Unsigned};
+
+bitflags! {
+    /// Flags to configure the behavior of the `[PteRemove`] walker.
+    pub(crate) struct PteRemoveFlags: u32 {
+        /// Free the pages.
+        const FREE_PAGES       = 1 << 0;
+
+        /// Free the page tables if fully cleared.
+        const FREE_PAGE_TABLES = 1 << 1;
+    }
+}
 
 /// The [`PteRemove`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
 /// remove pages and the underlying page tables for a given virtual address range. This is used by
@@ -19,6 +31,8 @@ where
 {
     /// The page table mapper.
     pub(crate) mapper: &'a Mapper,
+    /// Flags to configure the behavior.
+    pub(crate) flags: PteRemoveFlags,
     /// The page format.
     pub(crate) format: &'a PageFormat<'a, PTE>,
     /// A marker for PageTable.
@@ -44,15 +58,16 @@ where
     /// Frees the page if the PTE points to a present page and zeroes the PTE afterwards.
     fn handle_pte(&mut self, pte_type: PteType, _range: Range<usize>, pte: &mut PTE) -> Result<(), Error> { 
         let physical_mask = self.format.physical_mask;
-        self.mapper.free_page(physical_mask & *pte);
 
         if let PteType::Page(level) = pte_type {
             let level = &self.format.levels[level];
 
             if level.is_present(*pte) {
                 // Free the page and mark the PTE as non-present.
-                let physical_mask = self.format.physical_mask;
-                self.mapper.free_page(physical_mask & *pte);
+                if self.flags.contains(PteRemoveFlags::FREE_PAGES) {
+                    self.mapper.free_page(physical_mask & *pte);
+                }
+
                 *pte = PTE::zero();
             }
         }
@@ -79,7 +94,10 @@ where
 
         // Free the page table.
         drop(page_table);
-        self.mapper.free_page(physical_mask & *pte);
+
+        if self.flags.contains(PteRemoveFlags::FREE_PAGE_TABLES) {
+            self.mapper.free_page(physical_mask & *pte);
+        }
 
         Ok(())
     }
