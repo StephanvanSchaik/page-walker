@@ -79,7 +79,7 @@ where
         // sure that the page ranges are sign extended where appropriate. In addition, calculate
         // the PTE index.
         let page_size = level.page_size();
-        let page_ranges = (level.pte_index(range.start)..level.pte_index(range.end + page_size - 1))
+        let page_ranges = (level.pte_index(range.start)..=level.pte_index(range.end))
             .scan(self.sign_extend(range.start), |state, pte_index| {
                 let page_range = *state..level.end(*state).min(range.end);
                 *state = self.sign_extend(level.end(*state) + 1);
@@ -177,7 +177,7 @@ where
         // sure that the page ranges are sign extended where appropriate. In addition, calculate
         // the PTE index.
         let page_size = level.page_size();
-        let page_ranges = (level.pte_index(range.start)..level.pte_index(range.end + page_size - 1))
+        let page_ranges = (level.pte_index(range.start)..=level.pte_index(range.end))
             .scan(self.sign_extend(range.start), |state, pte_index| {
                 let page_range = *state..level.end(*state).min(range.end);
                 *state = self.sign_extend(level.end(*state) + 1);
