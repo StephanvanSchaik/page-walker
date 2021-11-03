@@ -175,7 +175,7 @@ where
     /// Frees the pages for the given range in the virtual address space. If the underlying page
     /// tables have been cleared, then this function also free the underlying page tables.
     pub fn free_range(&mut self, range: Range<usize>) -> Result<(), Error> {
-        let flags = PteRemovalFlags::empty();
+        let flags = PteRemovalFlags::all();
 
         let mut walker = PteRemover {
             mapper: &mut self.mapper,
@@ -194,7 +194,7 @@ where
     /// Unmaps the pages for the given range in the virtual address space without freeing the
     /// underlying pages. This is useful for memory-mapped I/O.
     pub fn unmap_range(&mut self, range: Range<usize>) -> Result<(), Error> {
-        let flags = PteRemovalFlags::all();
+        let flags = PteRemovalFlags::empty();
 
         let mut walker = PteRemover {
             mapper: &mut self.mapper,
