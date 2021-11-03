@@ -78,7 +78,6 @@ where
         // pages, so this iterator would return 0x0000..0x0fff and 0x1000..0x1fff. We also make
         // sure that the page ranges are sign extended where appropriate. In addition, calculate
         // the PTE index.
-        let page_size = level.page_size();
         let page_ranges = (level.pte_index(range.start)..=level.pte_index(range.end))
             .scan(self.sign_extend(range.start), |state, pte_index| {
                 let page_range = *state..level.end(*state).min(range.end);
@@ -176,7 +175,6 @@ where
         // pages, so this iterator would return 0x0000..0x0fff and 0x1000..0x1fff. We also make
         // sure that the page ranges are sign extended where appropriate. In addition, calculate
         // the PTE index.
-        let page_size = level.page_size();
         let page_ranges = (level.pte_index(range.start)..=level.pte_index(range.end))
             .scan(self.sign_extend(range.start), |state, pte_index| {
                 let page_range = *state..level.end(*state).min(range.end);
