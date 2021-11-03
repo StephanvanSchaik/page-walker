@@ -100,6 +100,7 @@ where
 
         if self.flags.contains(PteRemovalFlags::FREE_PAGE_TABLES) {
             self.mapper.free_page(physical_mask & *pte);
+            *pte = PTE::zero();
         }
 
         Ok(())
