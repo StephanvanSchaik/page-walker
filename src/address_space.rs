@@ -18,6 +18,12 @@ where
     /// An `Error` constant indicating that the PTE was not found.
     const PTE_NOT_FOUND: Error;
 
+    /// An `Error` constant indicating that a page was not present.
+    const PAGE_NOT_PRESENT: Error;
+
+    /// An `Error` constant indicating that a function has not been implemented.
+    const NOT_IMPLEMENTED: Error;
+
     /// Given the physical address, maps in the physical page backing the page table. To unmap the
     /// page upon use, the type implementing [`crate::table::PageTable`] must implement
     /// [`core::ops::Drop`] semantics.
@@ -28,9 +34,19 @@ where
     /// [`core::ops::Drop`] semantics.
     fn map_table_mut(&self, phys_addr: PTE) -> Result<PageTableMut, Error>;
 
+    /// Given the physical address of a page, maps in the physical page as an immutable slice.
+    fn map_page(&self, _phys_addr: PTE) -> Result<&[u8], Error> {
+        Err(Self::NOT_IMPLEMENTED)
+    }
+
+    /// Given the physical address of a page, maps in the physical page as a mutable slice.
+    fn map_page_mut(&self, _phys_addr: PTE) -> Result<&mut [u8], Error> {
+        Err(Self::NOT_IMPLEMENTED)
+    }
+
     /// Allocates a physical page.
-    fn alloc_page(&mut self) -> Option<PTE> {
-        None
+    fn alloc_page(&mut self) -> Result<PTE, Error> {
+        Err(Self::NOT_IMPLEMENTED)
     }
 
     /// Frees a physical page.
@@ -206,6 +222,44 @@ where
         };
 
         self.format.walk_mut(self.root, range, &mut walker)?;
+
+        Ok(())
+    }
+
+    /// Copies bytes starting at the given address into the given buffer.
+    pub fn copy_from(&mut self, data: &mut [u8], address: usize) -> Result<(), Error> {
+        let range = address..address + data.len();
+
+        let mut walker = CopyFromWalker {
+            mapper: &mut self.mapper,
+            offset: 0,
+            data,
+            format: &self.format,
+            page_table: PhantomData,
+            page_table_mut: PhantomData,
+            error: PhantomData,
+        };
+
+        self.format.walk(self.root, range, &mut walker)?;
+
+        Ok(())
+    }
+
+    /// Copies bytes from the given buffer to the given address.
+    pub fn copy_to(&mut self, address: usize, data: &[u8]) -> Result<(), Error> {
+        let range = address..address + data.len();
+
+        let mut walker = CopyToWalker {
+            mapper: &mut self.mapper,
+            offset: 0,
+            data,
+            format: &self.format,
+            page_table: PhantomData,
+            page_table_mut: PhantomData,
+            error: PhantomData,
+        };
+
+        self.format.walk(self.root, range, &mut walker)?;
 
         Ok(())
     }
