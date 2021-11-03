@@ -64,7 +64,7 @@ where
                     // Mark the page table as present, set the page table mask and ensure it is
                     // **not** a huge page.
                     *pte = page_table | level.present_bit.1 | level.page_table_mask |
-                        level.huge_page_bit.0 ^ level.huge_page_bit.1;
+                        ((level.huge_page_bit.0 ^ level.huge_page_bit.1) & level.huge_page_bit.0);
                 }
             }
         }
