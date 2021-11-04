@@ -5,15 +5,13 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use crate::PageFormat;
 use crate::walkers::*;
-use num_traits::{PrimInt, Unsigned};
+use num_traits::{FromPrimitive, PrimInt, Unsigned};
 
 /// The [`AddressSpace`] struct expects a type implementing this trait in order to map the page
 /// tables while performing the various page table operations.
-pub trait PageTableMapper<PTE, PageTable, PageTableMut, Error>
+pub trait PageTableMapper<PTE, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
 {
     /// An `Error` constant indicating that the PTE was not found.
     const PTE_NOT_FOUND: Error;
@@ -24,15 +22,11 @@ where
     /// An `Error` constant indicating that a function has not been implemented.
     const NOT_IMPLEMENTED: Error;
 
-    /// Given the physical address, maps in the physical page backing the page table. To unmap the
-    /// page upon use, the type implementing [`crate::table::PageTable`] must implement
-    /// [`core::ops::Drop`] semantics.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTable, Error>;
+    /// Reads the PTE at the given physical address.
+    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error>;
 
-    /// Given the physical address, maps in the physical page backing the page table. To unmap the
-    /// page upon use, the type implementing [`crate::table::PageTableMut`] must implement
-    /// [`core::ops::Drop`] semantics.
-    fn map_table_mut(&self, phys_addr: PTE) -> Result<PageTableMut, Error>;
+    /// Writes the PTE to the given physical address.
+    fn write_pte(&mut self, phys_addr: PTE, value: PTE) -> Result<(), Error>;
 
     /// Given the physical address of a page, maps in the physical page as an immutable slice.
     fn map_page(&self, _phys_addr: PTE) -> Result<&[u8], Error> {
@@ -55,12 +49,10 @@ where
 }
 
 /// Abstracts a virtual address space.
-pub struct AddressSpace<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+pub struct AddressSpace<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
     /// The page table format describing the page table hierarchy for this virtual address space.
     format: PageFormat<'a, PTE>,
@@ -71,22 +63,14 @@ where
     /// The type implementing PageTableMapper.
     mapper: Mapper,
 
-    /// A marker for PageTable.
-    page_table: core::marker::PhantomData<PageTable>,
-
-    /// A marker for PageTableMut.
-    page_table_mut: core::marker::PhantomData<PageTableMut>,
-
     /// A marker for Error.
     error: core::marker::PhantomData<Error>,
 }
 
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> AddressSpace<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+impl<'a, PTE, Mapper, Error> AddressSpace<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
     /// Creates a new address space for the given page table format descripting the page table
     /// hierarchy, the page table mapper and the pointer to the root of the page table
@@ -96,10 +80,18 @@ where
             format,
             mapper,
             root,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         }
+    }
+
+    /// Returns an immutable reference to the mapper.
+    pub fn mapper(&self) -> &Mapper {
+        &self.mapper
+    }
+
+    /// Returns a mutable reference to the mapper.
+    pub fn mapper_mut(&mut self) -> &mut Mapper {
+        &mut self.mapper
     }
 
     /// Reads the PTE for the given the virtual address if the virtual address is valid.
@@ -107,8 +99,6 @@ where
         let mut walker = PteReader {
             mapper: &self.mapper,
             pte: None,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 
@@ -121,12 +111,10 @@ where
     }
 
     /// Writes the PTE for the given virtual address if the virtual address is valid.
-    pub fn write_pte(&self, virt_addr: usize, pte: PTE) -> Result<(), Error> {
+    pub fn write_pte(&mut self, virt_addr: usize, pte: PTE) -> Result<(), Error> {
         let mut walker = PteWriter {
-            mapper: &self.mapper,
+            mapper: &mut self.mapper,
             pte,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 
@@ -142,8 +130,6 @@ where
             mapper: &mut self.mapper,
             mask: Some(mask),
             format: &self.format,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 
@@ -160,8 +146,6 @@ where
             mapper: &mut self.mapper,
             mask,
             format: &self.format,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 
@@ -173,13 +157,11 @@ where
     /// Changes the protection flags of the given range in the virtual address space. The first
     /// mask specifies the full mask to clear the bits. The second mask specifies the bits that
     /// should be set.
-    pub fn protect_range(&self, range: Range<usize>, mask: (PTE, PTE)) -> Result<(), Error> {
+    pub fn protect_range(&mut self, range: Range<usize>, mask: (PTE, PTE)) -> Result<(), Error> {
         let mut walker = PteProtector {
-            mapper: &self.mapper,
+            mapper: &mut self.mapper,
             mask,
             format: &self.format,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 
@@ -197,8 +179,6 @@ where
             mapper: &mut self.mapper,
             flags,
             format: &self.format,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 
@@ -216,8 +196,6 @@ where
             mapper: &mut self.mapper,
             flags,
             format: &self.format,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 
@@ -235,8 +213,6 @@ where
             offset: 0,
             data,
             format: &self.format,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 
@@ -254,8 +230,6 @@ where
             offset: 0,
             data,
             format: &self.format,
-            page_table: PhantomData,
-            page_table_mut: PhantomData,
             error: PhantomData,
         };
 

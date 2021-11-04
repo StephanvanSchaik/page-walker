@@ -5,45 +5,42 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use crate::address_space::PageTableMapper;
 use crate::{PageFormat, PteType};
-use num_traits::{PrimInt, Unsigned};
+use num_traits::{FromPrimitive, PrimInt, Unsigned};
 
 /// The [`PteProtector`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
 /// change the protection flags of a given virtual address range. This function is used by the
 /// [`AddressSpace::protect_range`] method.
 ///
 /// [`AddressSpace::protect_range`]: `super::super::AddressSpace::protect_range`
-pub struct PteProtector<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+pub struct PteProtector<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
     /// The page table mapper.
-    pub mapper: &'a Mapper,
+    pub mapper: &'a mut Mapper,
     /// The protection flags that should be set. The first mask is the mask of bits that should be
     /// cleared. The second mask is the mask of bits that should be set.
     pub mask: (PTE, PTE),
     /// The page format.
     pub format: &'a PageFormat<'a, PTE>,
-    /// A marker for PageTable.
-    pub page_table: PhantomData<PageTable>,
-    /// A marker for PageTableMut.
-    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
 }
 
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteProtector<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+impl<'a, PTE, Mapper, Error> crate::PageWalkerMut<PTE, Error> for PteProtector<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
-    /// Uses the page table mapper to map the page table backing the physical address.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTableMut, Error> {
-        self.mapper.map_table_mut(phys_addr)
+    /// Reads the PTE at the given physical address.
+    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error> {
+        self.mapper.read_pte(phys_addr)
+    }
+
+    /// Writes the PTE to the given physical address.
+    fn write_pte(&mut self, phys_addr: PTE, value: PTE) -> Result<(), Error> {
+        self.mapper.write_pte(phys_addr, value)
     }
 
     /// Checks if the PTE points to a page that is present, and changes the protection flags if so.

@@ -4,7 +4,7 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use crate::address_space::PageTableMapper;
 use crate::{PageFormat, PteType};
-use num_traits::{PrimInt, Unsigned};
+use num_traits::{FromPrimitive, PrimInt, Unsigned};
 
 /// The [`CopyFromWalker`] struct is an implementation of a [`crate::walker::PageWalker`] used to
 /// copy data from a given a virtual address range.
@@ -12,12 +12,10 @@ use num_traits::{PrimInt, Unsigned};
 /// This is used by the [`AddressSpace::copy_from`] method.
 ///
 /// [`AddressSpace::copy_from`]: `super::super::AddressSpace::copy_from`
-pub struct CopyFromWalker<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+pub struct CopyFromWalker<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
     /// The page table mapper.
     pub mapper: &'a Mapper,
@@ -27,24 +25,18 @@ where
     pub data: &'a mut [u8],
     /// The page format.
     pub format: &'a PageFormat<'a, PTE>,
-    /// A marker for PageTable.
-    pub page_table: PhantomData<PageTable>,
-    /// A marker for PageTableMut.
-    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
 }
 
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalker<PTE, PageTable, Error> for CopyFromWalker<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+impl<'a, PTE, Mapper, Error> crate::PageWalker<PTE, Error> for CopyFromWalker<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
-    /// Uses the page table mapper to map the page table backing the physical address.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTable, Error> {
-        self.mapper.map_table(phys_addr)
+    /// Reads the PTE at the given physical address.
+    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error> {
+        self.mapper.read_pte(phys_addr)
     }
 
     /// Maps the page and copies the data to the buffer.
@@ -84,12 +76,10 @@ where
 /// This is used by the [`AddressSpace::copy_to`] method.
 ///
 /// [`AddressSpace::copy_to`]: `super::super::AddressSpace::copy_to`
-pub struct CopyToWalker<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+pub struct CopyToWalker<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
     /// The page table mapper.
     pub mapper: &'a Mapper,
@@ -99,24 +89,18 @@ where
     pub data: &'a [u8],
     /// The page format.
     pub format: &'a PageFormat<'a, PTE>,
-    /// A marker for PageTable.
-    pub page_table: PhantomData<PageTable>,
-    /// A marker for PageTableMut.
-    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
 }
 
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalker<PTE, PageTable, Error> for CopyToWalker<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+impl<'a, PTE, Mapper, Error> crate::PageWalker<PTE, Error> for CopyToWalker<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
-    /// Uses the page table mapper to map the page table backing the physical address.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTable, Error> {
-        self.mapper.map_table(phys_addr)
+    /// Reads the PTE at the given physical address.
+    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error> {
+        self.mapper.read_pte(phys_addr)
     }
 
     /// Maps the page and copies the data from the buffer.

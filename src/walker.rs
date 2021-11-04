@@ -57,15 +57,12 @@ impl PteType {
 /// invoke the appropriate user callbacks, such that the user can provide an implementation for
 /// interacting with the various PTEs during the page table walk. For the mutable version, see
 /// [`crate::format::PageFormat::walk_mut`] and [`PageWalkerMut`].
-pub trait PageWalker<PTE, PageTable, Error>
+pub trait PageWalker<PTE, Error>
 where
     PTE: PrimInt + Unsigned,
-    PageTable: crate::table::PageTable<PTE>,
 {
-    /// Given the physical address, maps in the physical page backing the page table. To unmap the
-    /// page upon use, the type implementing [`crate::table::PageTable`] must implement
-    /// [`core::ops::Drop`] semantics.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTable, Error>;
+    /// Reads the PTE at the given physical address.
+    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error>;
 
     /// This callback handles the current PTE unconditionally and is given the [`PteType`], the
     /// virtual address range and an immutable reference to the PTE. The implementation of this
@@ -108,15 +105,15 @@ where
 /// to invoke the appropriate user callbacks, such that the user can provide an implementation for
 /// interacting with the various PTEs during the page table walk. For the immutable version, see
 /// [`crate::format::PageFormat::walk`] and [`PageWalker`].
-pub trait PageWalkerMut<PTE, PageTableMut, Error>
+pub trait PageWalkerMut<PTE, Error>
 where
     PTE: PrimInt + Unsigned,
-    PageTableMut: crate::table::PageTableMut<PTE>,
 {
-    /// Given the physical address, maps in the physical page backing the page table. To unmap the
-    /// page upon use, the type implementing [`crate::table::PageTable`] must implement
-    /// [`core::ops::Drop`] semantics.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTableMut, Error>;
+    /// Reads the PTE at the given physical address.
+    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error>;
+
+    /// Writes the PTE to the given physical address.
+    fn write_pte(&mut self, phys_addr: PTE, value: PTE) -> Result<(), Error>;
 
     /// This callback handles the current PTE unconditionally and is given the [`PteType`], the
     /// virtual address range and a mutable reference to the PTE. The implementation of this

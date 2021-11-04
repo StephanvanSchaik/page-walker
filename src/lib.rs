@@ -39,12 +39,10 @@ pub mod address_space;
 pub mod arch;
 pub mod format;
 pub mod level;
-pub mod table;
 pub mod walker;
 pub mod walkers;
 
 pub use address_space::{AddressSpace, PageTableMapper};
 pub use format::PageFormat;
 pub use level::PageLevel;
-pub use table::{PageTable, PageTableMut};
 pub use walker::{PageWalker, PageWalkerMut, PteType};

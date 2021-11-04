@@ -5,19 +5,17 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use crate::address_space::PageTableMapper;
 use crate::PageFormat;
-use num_traits::{PrimInt, Unsigned};
+use num_traits::{FromPrimitive, PrimInt, Unsigned};
 
 /// The [`PteMapper`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to map
 /// a physical address range and allocate the underlying page tables for a given virtual address
 /// range. This is used by the [`AddressSpace::map_range`] method.
 ///
 /// [`AddressSpace::map_range`]: `super::super::AddressSpace::map_range`
-pub struct PteMapper<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+pub struct PteMapper<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
     /// The page table mapper.
     pub mapper: &'a mut Mapper,
@@ -25,24 +23,23 @@ where
     pub format: &'a PageFormat<'a, PTE>,
     /// The mask to set for pages.
     pub mask: PTE,
-    /// A marker for PageTable.
-    pub page_table: PhantomData<PageTable>,
-    /// A marker for PageTableMut.
-    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
 }
 
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteMapper<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+impl<'a, PTE, Mapper, Error> crate::PageWalkerMut<PTE, Error> for PteMapper<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
-    /// Uses the page table mapper to map the page table backing the physical address.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTableMut, Error> {
-        self.mapper.map_table_mut(phys_addr)
+    /// Reads the PTE at the given physical address.
+    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error> {
+        self.mapper.read_pte(phys_addr)
+    }
+
+    /// Writes the PTE to the given physical address.
+    fn write_pte(&mut self, phys_addr: PTE, value: PTE) -> Result<(), Error> {
+        self.mapper.write_pte(phys_addr, value)
     }
 
     /// Allocates the page or page table for the current level as we are handling PTE holes. If the

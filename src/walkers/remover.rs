@@ -6,7 +6,7 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use crate::address_space::PageTableMapper;
 use crate::{PageFormat, PteType};
-use num_traits::{PrimInt, Unsigned};
+use num_traits::{FromPrimitive, PrimInt, Unsigned};
 
 bitflags! {
     /// Flags to configure the behavior of the `[PteRemover`] walker.
@@ -25,12 +25,10 @@ bitflags! {
 ///
 /// [`AddressSpace::unmap_range`]: `super::super::AddressSpace::unmap_range`
 /// [`AddressSpace::free_range`]: `super::super::AddressSpace::free_range`
-pub struct PteRemover<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+pub struct PteRemover<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
     /// The page table mapper.
     pub mapper: &'a mut Mapper,
@@ -38,24 +36,23 @@ where
     pub flags: PteRemovalFlags,
     /// The page format.
     pub format: &'a PageFormat<'a, PTE>,
-    /// A marker for PageTable.
-    pub page_table: PhantomData<PageTable>,
-    /// A marker for PageTableMut.
-    pub page_table_mut: PhantomData<PageTableMut>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
 }
 
-impl<'a, PTE, PageTable, PageTableMut, Mapper, Error> crate::PageWalkerMut<PTE, PageTableMut, Error> for PteRemover<'a, PTE, PageTable, PageTableMut, Mapper, Error>
+impl<'a, PTE, Mapper, Error> crate::PageWalkerMut<PTE, Error> for PteRemover<'a, PTE, Mapper, Error>
 where
-    PTE: PrimInt + Unsigned,
-    PageTable: crate::PageTable<PTE>,
-    PageTableMut: crate::PageTableMut<PTE>,
-    Mapper: PageTableMapper<PTE, PageTable, PageTableMut, Error>,
+    PTE: FromPrimitive + PrimInt + Unsigned,
+    Mapper: PageTableMapper<PTE, Error>,
 {
-    /// Uses the page table mapper to map the page table backing the physical address.
-    fn map_table(&self, phys_addr: PTE) -> Result<PageTableMut, Error> {
-        self.mapper.map_table_mut(phys_addr)
+    /// Reads the PTE at the given physical address.
+    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error> {
+        self.mapper.read_pte(phys_addr)
+    }
+
+    /// Writes the PTE to the given physical address.
+    fn write_pte(&mut self, phys_addr: PTE, value: PTE) -> Result<(), Error> {
+        self.mapper.write_pte(phys_addr, value)
     }
 
     /// Frees the page if the PTE points to a present page and zeroes the PTE afterwards.
@@ -83,20 +80,16 @@ where
     fn handle_post_pte(&mut self, index: usize, _range: Range<usize>, pte: &mut PTE) -> Result<(), Error> {
         let level = &self.format.levels[index];
         let physical_mask = self.format.physical_mask;
-
-        // Map in the page table.
-        let mut page_table = self.map_table(physical_mask & *pte)?;
-        let entries = page_table.as_mut();
+        let phys_addr = physical_mask & *pte;
 
         // Check if all entries have been cleared.
         for i in 0..level.entries() {
-            if entries[i] != PTE::zero() {
+            let offset: PTE = PTE::from_usize(i * core::mem::size_of::<PTE>()).unwrap();
+
+            if self.read_pte(phys_addr + offset)? != PTE::zero() {
                 return Ok(());
             }
         }
-
-        // Free the page table.
-        drop(page_table);
 
         if self.flags.contains(PteRemovalFlags::FREE_PAGE_TABLES) {
             self.mapper.free_page(physical_mask & *pte);
