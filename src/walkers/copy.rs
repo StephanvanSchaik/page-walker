@@ -81,7 +81,7 @@ where
     Mapper: PageTableMapper<PTE, Error>,
 {
     /// The page table mapper.
-    pub mapper: &'a Mapper,
+    pub mapper: &'a mut Mapper,
     /// The offset within the buffer.
     pub offset: usize,
     /// Storage for the data to copy.

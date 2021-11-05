@@ -61,7 +61,7 @@ where
     root: PTE,
 
     /// The type implementing PageTableMapper.
-    mapper: Mapper,
+    mapper: &'a mut Mapper,
 
     /// A marker for Error.
     error: core::marker::PhantomData<Error>,
@@ -75,7 +75,7 @@ where
     /// Creates a new address space for the given page table format descripting the page table
     /// hierarchy, the page table mapper and the pointer to the root of the page table
     /// hierarchy.
-    pub fn new(format: PageFormat<'a, PTE>, mapper: Mapper, root: PTE) -> Self {
+    pub fn new(format: PageFormat<'a, PTE>, mapper: &'a mut Mapper, root: PTE) -> Self {
         Self {
             format,
             mapper,
@@ -84,20 +84,10 @@ where
         }
     }
 
-    /// Returns an immutable reference to the mapper.
-    pub fn mapper(&self) -> &Mapper {
-        &self.mapper
-    }
-
-    /// Returns a mutable reference to the mapper.
-    pub fn mapper_mut(&mut self) -> &mut Mapper {
-        &mut self.mapper
-    }
-
     /// Reads the PTE for the given the virtual address if the virtual address is valid.
     pub fn read_pte(&self, virt_addr: usize) -> Result<PTE, Error> {
         let mut walker = PteReader {
-            mapper: &self.mapper,
+            mapper: self.mapper,
             pte: None,
             error: PhantomData,
         };
@@ -113,7 +103,7 @@ where
     /// Writes the PTE for the given virtual address if the virtual address is valid.
     pub fn write_pte(&mut self, virt_addr: usize, pte: PTE) -> Result<(), Error> {
         let mut walker = PteWriter {
-            mapper: &mut self.mapper,
+            mapper: self.mapper,
             pte,
             error: PhantomData,
         };
@@ -127,7 +117,7 @@ where
     /// space. The pages are protected using the given mask.
     pub fn allocate_range(&mut self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
         let mut walker = PteAllocator {
-            mapper: &mut self.mapper,
+            mapper: self.mapper,
             mask: Some(mask),
             format: &self.format,
             error: PhantomData,
@@ -143,7 +133,7 @@ where
     /// for memory-mapped I/O.
     pub fn map_range(&mut self, range: Range<usize>, mask: PTE) -> Result<(), Error> {
         let mut walker = PteMapper {
-            mapper: &mut self.mapper,
+            mapper: self.mapper,
             mask,
             format: &self.format,
             error: PhantomData,
@@ -159,7 +149,7 @@ where
     /// should be set.
     pub fn protect_range(&mut self, range: Range<usize>, mask: (PTE, PTE)) -> Result<(), Error> {
         let mut walker = PteProtector {
-            mapper: &mut self.mapper,
+            mapper: self.mapper,
             mask,
             format: &self.format,
             error: PhantomData,
@@ -176,7 +166,7 @@ where
         let flags = PteRemovalFlags::all();
 
         let mut walker = PteRemover {
-            mapper: &mut self.mapper,
+            mapper: self.mapper,
             flags,
             format: &self.format,
             error: PhantomData,
@@ -193,7 +183,7 @@ where
         let flags = PteRemovalFlags::empty();
 
         let mut walker = PteRemover {
-            mapper: &mut self.mapper,
+            mapper: self.mapper,
             flags,
             format: &self.format,
             error: PhantomData,
@@ -209,7 +199,7 @@ where
         let range = address..address + data.len();
 
         let mut walker = CopyFromWalker {
-            mapper: &mut self.mapper,
+            mapper: self.mapper,
             offset: 0,
             data,
             format: &self.format,
@@ -226,7 +216,7 @@ where
         let range = address..address + data.len();
 
         let mut walker = CopyToWalker {
-            mapper: &mut self.mapper,
+            mapper: self.mapper,
             offset: 0,
             data,
             format: &self.format,
