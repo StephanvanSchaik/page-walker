@@ -28,13 +28,13 @@ where
     /// Writes the PTE to the given physical address.
     fn write_pte(&mut self, phys_addr: PTE, value: PTE) -> Result<(), Error>;
 
-    /// Given the physical address of a page, maps in the physical page as an immutable slice.
-    fn map_page(&self, _phys_addr: PTE) -> Result<&[u8], Error> {
+    /// Reads the bytes from the given physical address.
+    fn read_bytes(&self, _bytes: &mut [u8], _phys_addr: PTE) -> Result<usize, Error> {
         Err(Self::NOT_IMPLEMENTED)
     }
 
-    /// Given the physical address of a page, maps in the physical page as a mutable slice.
-    fn map_page_mut(&self, _phys_addr: PTE) -> Result<&mut [u8], Error> {
+    /// Writes the given bytes to the given physical address.
+    fn write_bytes(&mut self, _phys_addr: PTE, _bytes: &[u8]) -> Result<usize, Error> {
         Err(Self::NOT_IMPLEMENTED)
     }
 

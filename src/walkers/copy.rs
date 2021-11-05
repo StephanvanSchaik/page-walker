@@ -52,18 +52,17 @@ where
             return Err(Mapper::PAGE_NOT_PRESENT);
         }
 
-        // Map the page.
-        let page = self.mapper.map_page(*pte & self.format.physical_mask)?;
+        // Get the physical address of the page.
+        let phys_addr = *pte & self.format.physical_mask;
 
         // Get the page offset.
-        let offset = range.start & (level.page_size() - 1);
-        let page = &page[offset..];
+        let offset = PTE::from_usize(range.start & (level.page_size() - 1)).unwrap();
 
         // Determine how many bytes to copy.
-        let size = self.data.len().min(page.len());
+        let size = (self.data.len() - self.offset).min(level.page_size());
 
         // Copy the bytes.
-        self.data[self.offset..self.offset + size].copy_from_slice(&page[..size]);
+        self.mapper.read_bytes(&mut self.data[self.offset..self.offset + size], phys_addr + offset)?;
         self.offset += size;
 
         Ok(())
@@ -116,18 +115,17 @@ where
             return Err(Mapper::PAGE_NOT_PRESENT);
         }
 
-        // Map the page.
-        let page = self.mapper.map_page_mut(*pte & self.format.physical_mask)?;
+        // Get the physical address of the page.
+        let phys_addr = *pte & self.format.physical_mask;
 
         // Get the page offset.
-        let offset = range.start & (level.page_size() - 1);
-        let page = &mut page[offset..];
+        let offset = PTE::from_usize(range.start & (level.page_size() - 1)).unwrap();
 
         // Determine how many bytes to copy.
-        let size = self.data.len().min(page.len());
+        let size = (self.data.len() - self.offset).min(level.page_size());
 
         // Copy the bytes.
-        page[..size].copy_from_slice(&self.data[self.offset..self.offset + size]);
+        self.mapper.write_bytes(phys_addr + offset, &self.data[self.offset..self.offset + size])?;
         self.offset += size;
 
         Ok(())
