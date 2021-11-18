@@ -43,6 +43,7 @@ lazy_static! {
     pub static ref PAGE_FORMAT_4K_L3: PageFormat<'static> = PageFormat {
         levels: &PAGE_LEVELS_4K[0..3],
         physical_mask: 0x000f_ffff_ffff_f000,
+        pte_size: core::mem::size_of::<u64>(),
     };
 
     /// A page table layout for AArch64 consisting of four page levels with 64-bit PTEs and a page
@@ -53,6 +54,7 @@ lazy_static! {
     pub static ref PAGE_FORMAT_4K_L4: PageFormat<'static> = PageFormat {
         levels: &PAGE_LEVELS_4K[0..3],
         physical_mask: 0x000f_ffff_ffff_f000,
+        pte_size: core::mem::size_of::<u64>(),
     };
 
     /// A page table layout for AArch64 consisting of four page levels with 64-bit PTEs and a page
@@ -93,6 +95,7 @@ lazy_static! {
             },
         ],
         physical_mask: 0x000f_ffff_ffff_f000,
+        pte_size: core::mem::size_of::<u64>(),
     };
 
     /// A page table layout for AArch64 consisting of three page levels with 64-bit PTEs and a page
@@ -126,5 +129,6 @@ lazy_static! {
             },
         ],
         physical_mask: 0x000f_ffff_ffff_f000,
+        pte_size: core::mem::size_of::<u64>(),
     };
 }

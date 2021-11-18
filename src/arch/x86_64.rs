@@ -59,6 +59,7 @@ lazy_static! {
     pub static ref PAGE_FORMAT_4K_L4: PageFormat<'static> = PageFormat {
         levels: &PAGE_LEVELS_4K[0..4],
         physical_mask: 0x000f_ffff_ffff_f000,
+        pte_size: core::mem::size_of::<u64>(),
     };
 
     /// A page table layout for x86-64 consisting of five page levels with 64-bit PTEs and a page
@@ -69,6 +70,7 @@ lazy_static! {
     pub static ref PAGE_FORMAT_4K_L5: PageFormat<'static> = PageFormat {
         levels: PAGE_LEVELS_4K,
         physical_mask: 0x000f_ffff_ffff_f000,
+        pte_size: core::mem::size_of::<u64>(),
     };
 
     /// The five-level page table layout is also known as LA57 as it expands linear or virtual

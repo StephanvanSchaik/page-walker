@@ -33,6 +33,7 @@ lazy_static! {
             },
         ],
         physical_mask: 0xffff_f000,
+        pte_size: core::mem::size_of::<u32>(),
     };
 
     /// A page table layout for x86 consisting of three page levels with 64-bit PTEs, through
@@ -65,6 +66,7 @@ lazy_static! {
             },
         ],
         physical_mask: 0x000f_ffff_ffff_f000,
+        pte_size: core::mem::size_of::<u64>(),
     };
 
     /// The default page format is a two-level page table hierarchy with 4K pages.

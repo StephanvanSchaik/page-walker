@@ -17,6 +17,9 @@ pub struct PageFormat<'a> {
     /// The physical mask of bits that refer to an actual physical address and are not used for PTE
     /// metadata.
     pub physical_mask: u64,
+
+    /// The size of a page table entry (PTE) in bytes.
+    pub pte_size: usize,
 }
 
 impl<'a> PageFormat<'a> {
