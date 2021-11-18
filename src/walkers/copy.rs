@@ -4,7 +4,6 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use crate::address_space::PageTableMapper;
 use crate::{PageFormat, PteType};
-use num_traits::{FromPrimitive, PrimInt, Unsigned};
 
 /// The [`CopyFromWalker`] struct is an implementation of a [`crate::walker::PageWalker`] used to
 /// copy data from a given a virtual address range.
@@ -12,10 +11,9 @@ use num_traits::{FromPrimitive, PrimInt, Unsigned};
 /// This is used by the [`AddressSpace::copy_from`] method.
 ///
 /// [`AddressSpace::copy_from`]: `super::super::AddressSpace::copy_from`
-pub struct CopyFromWalker<'a, PTE, Mapper, Error>
+pub struct CopyFromWalker<'a, Mapper, Error>
 where
-    PTE: FromPrimitive + PrimInt + Unsigned,
-    Mapper: PageTableMapper<PTE, Error>,
+    Mapper: PageTableMapper<Error>,
 {
     /// The page table mapper.
     pub mapper: &'a Mapper,
@@ -24,23 +22,22 @@ where
     /// Storage for the copied data.
     pub data: &'a mut [u8],
     /// The page format.
-    pub format: &'a PageFormat<'a, PTE>,
+    pub format: &'a PageFormat<'a>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
 }
 
-impl<'a, PTE, Mapper, Error> crate::PageWalker<PTE, Error> for CopyFromWalker<'a, PTE, Mapper, Error>
+impl<'a, Mapper, Error> crate::PageWalker<Error> for CopyFromWalker<'a, Mapper, Error>
 where
-    PTE: FromPrimitive + PrimInt + Unsigned,
-    Mapper: PageTableMapper<PTE, Error>,
+    Mapper: PageTableMapper<Error>,
 {
     /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error> {
+    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
         self.mapper.read_pte(phys_addr)
     }
 
     /// Maps the page and copies the data to the buffer.
-    fn handle_pte(&mut self, pte_type: PteType, range: Range<usize>, pte: &PTE) -> Result<(), Error> {
+    fn handle_pte(&mut self, pte_type: PteType, range: Range<usize>, pte: &u64) -> Result<(), Error> {
         let level = match pte_type {
             PteType::Page(level) => level,
             _ => return Ok(()),
@@ -56,7 +53,7 @@ where
         let phys_addr = *pte & self.format.physical_mask;
 
         // Get the page offset.
-        let offset = PTE::from_usize(range.start & (level.page_size() - 1)).unwrap();
+        let offset = (range.start & (level.page_size() - 1)) as u64;
 
         // Determine how many bytes to copy.
         let size = (self.data.len() - self.offset).min(level.page_size());
@@ -75,10 +72,9 @@ where
 /// This is used by the [`AddressSpace::copy_to`] method.
 ///
 /// [`AddressSpace::copy_to`]: `super::super::AddressSpace::copy_to`
-pub struct CopyToWalker<'a, PTE, Mapper, Error>
+pub struct CopyToWalker<'a, Mapper, Error>
 where
-    PTE: FromPrimitive + PrimInt + Unsigned,
-    Mapper: PageTableMapper<PTE, Error>,
+    Mapper: PageTableMapper<Error>,
 {
     /// The page table mapper.
     pub mapper: &'a mut Mapper,
@@ -87,23 +83,22 @@ where
     /// Storage for the data to copy.
     pub data: &'a [u8],
     /// The page format.
-    pub format: &'a PageFormat<'a, PTE>,
+    pub format: &'a PageFormat<'a>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
 }
 
-impl<'a, PTE, Mapper, Error> crate::PageWalker<PTE, Error> for CopyToWalker<'a, PTE, Mapper, Error>
+impl<'a, Mapper, Error> crate::PageWalker<Error> for CopyToWalker<'a, Mapper, Error>
 where
-    PTE: FromPrimitive + PrimInt + Unsigned,
-    Mapper: PageTableMapper<PTE, Error>,
+    Mapper: PageTableMapper<Error>,
 {
     /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error> {
+    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
         self.mapper.read_pte(phys_addr)
     }
 
     /// Maps the page and copies the data from the buffer.
-    fn handle_pte(&mut self, pte_type: PteType, range: Range<usize>, pte: &PTE) -> Result<(), Error> {
+    fn handle_pte(&mut self, pte_type: PteType, range: Range<usize>, pte: &u64) -> Result<(), Error> {
         let level = match pte_type {
             PteType::Page(level) => level,
             _ => return Ok(()),
@@ -119,7 +114,7 @@ where
         let phys_addr = *pte & self.format.physical_mask;
 
         // Get the page offset.
-        let offset = PTE::from_usize(range.start & (level.page_size() - 1)).unwrap();
+        let offset = (range.start & (level.page_size() - 1)) as u64;
 
         // Determine how many bytes to copy.
         let size = (self.data.len() - self.offset).min(level.page_size());

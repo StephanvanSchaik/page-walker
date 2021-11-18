@@ -4,7 +4,6 @@
 //! tables of an address space in a generic way.
 
 use core::ops::Range;
-use num_traits::{PrimInt, Unsigned};
 
 /// The PTE can either be a page or page table.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -57,12 +56,9 @@ impl PteType {
 /// invoke the appropriate user callbacks, such that the user can provide an implementation for
 /// interacting with the various PTEs during the page table walk. For the mutable version, see
 /// [`crate::format::PageFormat::walk_mut`] and [`PageWalkerMut`].
-pub trait PageWalker<PTE, Error>
-where
-    PTE: PrimInt + Unsigned,
-{
+pub trait PageWalker<Error> {
     /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error>;
+    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error>;
 
     /// This callback handles the current PTE unconditionally and is given the [`PteType`], the
     /// virtual address range and an immutable reference to the PTE. The implementation of this
@@ -71,7 +67,7 @@ where
         &mut self,
         _page_type: PteType,
         _range: Range<usize>,
-        _pte: &PTE,
+        _pte: &u64,
     ) -> Result<(), Error> {
         Ok(())
     }
@@ -83,7 +79,7 @@ where
         &mut self,
         _level: usize,
         _range: Range<usize>,
-        _pte: &PTE,
+        _pte: &u64,
     ) -> Result<(), Error> {
         Ok(())
     }
@@ -95,7 +91,7 @@ where
         &mut self,
         _level: usize,
         _range: Range<usize>,
-        _pte: &PTE,
+        _pte: &u64,
     ) -> Result<(), Error> {
         Ok(())
     }
@@ -105,15 +101,12 @@ where
 /// to invoke the appropriate user callbacks, such that the user can provide an implementation for
 /// interacting with the various PTEs during the page table walk. For the immutable version, see
 /// [`crate::format::PageFormat::walk`] and [`PageWalker`].
-pub trait PageWalkerMut<PTE, Error>
-where
-    PTE: PrimInt + Unsigned,
-{
+pub trait PageWalkerMut<Error> {
     /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error>;
+    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error>;
 
     /// Writes the PTE to the given physical address.
-    fn write_pte(&mut self, phys_addr: PTE, value: PTE) -> Result<(), Error>;
+    fn write_pte(&mut self, phys_addr: u64, value: u64) -> Result<(), Error>;
 
     /// This callback handles the current PTE unconditionally and is given the [`PteType`], the
     /// virtual address range and a mutable reference to the PTE. The implementation of this
@@ -122,7 +115,7 @@ where
         &mut self,
         _page_type: PteType,
         _range: Range<usize>,
-        _pte: &mut PTE,
+        _pte: &mut u64,
     ) -> Result<(), Error> {
         Ok(())
     }
@@ -134,7 +127,7 @@ where
         &mut self,
         _level: usize,
         _range: Range<usize>,
-        _pte: &mut PTE,
+        _pte: &mut u64,
     ) -> Result<(), Error> {
         Ok(())
     }
@@ -146,7 +139,7 @@ where
         &mut self,
         _level: usize,
         _range: Range<usize>,
-        _pte: &mut PTE,
+        _pte: &mut u64,
     ) -> Result<(), Error> {
         Ok(())
     }

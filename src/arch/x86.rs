@@ -3,19 +3,19 @@ use lazy_static::lazy_static;
 use crate::{PageFormat, PageLevel};
 
 /// The page is present.
-pub const PAGE_PRESENT: u32 = 1 << 0;
+pub const PAGE_PRESENT: u64 = 1 << 0;
 /// The page is writeable.
-pub const PAGE_WRITE:   u32 = 1 << 1;
+pub const PAGE_WRITE:   u64 = 1 << 1;
 /// The page is accessible in user mode.
-pub const PAGE_USER:    u32 = 1 << 2;
+pub const PAGE_USER:    u64 = 1 << 2;
 /// The page is a huge page.
-pub const PAGE_HUGE:    u32 = 1 << 7;
+pub const PAGE_HUGE:    u64 = 1 << 7;
 
 lazy_static! {
     /// A page table layout for x86 consisting of two page levels with 32-bit PTEs and a page
     /// size of 4K. Therefore, each page table has 1024 entries and uses 10 bits of the virtual
     /// address to index into the page table. Furthermore, it supports 4M huge pages.
-    pub static ref PAGE_FORMAT_4K: PageFormat<'static, u32> = PageFormat {
+    pub static ref PAGE_FORMAT_4K: PageFormat<'static> = PageFormat {
         levels: &[
             PageLevel {
                 shift_bits: 12,
@@ -40,7 +40,7 @@ lazy_static! {
     /// table has 512 entries and uses 9 bits of the virtual address to index into the page table,
     /// except for the root page table. The root page table has four entries and uses 2 bits of the
     /// virtual address to index into the page table. Furthermore, it supports 2M huge pages.
-    pub static ref PAGE_FORMAT_4K_PAE: PageFormat<'static, u64> = PageFormat {
+    pub static ref PAGE_FORMAT_4K_PAE: PageFormat<'static> = PageFormat {
         levels: &[
             PageLevel {
                 shift_bits: 12,
@@ -68,5 +68,5 @@ lazy_static! {
     };
 
     /// The default page format is a two-level page table hierarchy with 4K pages.
-    pub static ref DEFAULT_PAGE_FORMAT: PageFormat<'static, u32> = PAGE_FORMAT_4K.clone();
+    pub static ref DEFAULT_PAGE_FORMAT: PageFormat<'static> = PAGE_FORMAT_4K.clone();
 }

@@ -4,29 +4,22 @@
 use core::ops::Range;
 use crate::level::PageLevel;
 use crate::walker::PteType;
-use num_traits::{FromPrimitive, PrimInt, Unsigned};
 
 /// Describes the page format of the page hierarchy and the mask of bits in the PTE that refer to
 /// the actual physical address and are not used for metadata.
 #[derive(Clone, Debug)]
-pub struct PageFormat<'a, PTE>
-where
-    PTE: FromPrimitive + PrimInt + Unsigned,
-{
+pub struct PageFormat<'a> {
     /// Describes the page table hierarchy as a slice of [`crate::level::PageLevel`] structs that
     /// each describe a single level in this hierarchy, where the level at index zero is the leaf
     /// node and the last page level is the root.
-    pub levels: &'a [PageLevel<PTE>],
+    pub levels: &'a [PageLevel],
 
     /// The physical mask of bits that refer to an actual physical address and are not used for PTE
     /// metadata.
-    pub physical_mask: PTE,
+    pub physical_mask: u64,
 }
 
-impl<'a, PTE> PageFormat<'a, PTE>
-where
-    PTE: FromPrimitive + PrimInt + Unsigned,
-{
+impl<'a> PageFormat<'a> {
     /// Calculates the full virtual address mask by setting all the bits for each page level and
     /// finding the largest mask. This is used by the [`PageFormat::sign_extend`] method to
     /// determine the sign bit.
@@ -57,13 +50,13 @@ where
     /// while traversing the page tables.
     fn do_walk<PageWalker, Error>(
         &self,
-        phys_addr: PTE,
+        phys_addr: u64,
         mut index: usize,
         range: Range<usize>,
         walker: &mut PageWalker,
     ) -> Result<(), Error>
     where
-        PageWalker: crate::walker::PageWalker<PTE, Error>,
+        PageWalker: crate::walker::PageWalker<Error>,
     {
         // Ensure that the index is valid.
         if index >= self.levels.len() {
@@ -88,7 +81,7 @@ where
         for (pte_index, page_range) in page_ranges {
             // Get the PTE index for this page range, and then index into the page table to get the
             // corresponding PTE.
-            let offset: PTE = PTE::from_usize(pte_index * core::mem::size_of::<PTE>()).unwrap();
+            let offset = (pte_index * core::mem::size_of::<u64>()) as u64;
             let pte = walker.read_pte(phys_addr + offset)?;
 
             // Determine whether the PTE refers to a page or a page table. That is, it is a page if
@@ -133,12 +126,12 @@ where
     /// while traversing the page tables.
     pub fn walk<PageWalker, Error>(
         &self,
-        phys_addr: PTE,
+        phys_addr: u64,
         range: Range<usize>,
         walker: &mut PageWalker,
     ) -> Result<(), Error>
     where
-        PageWalker: crate::walker::PageWalker<PTE, Error>,
+        PageWalker: crate::walker::PageWalker<Error>,
     {
         self.do_walk(phys_addr, self.levels.len() - 1, range, walker)
     }
@@ -149,13 +142,13 @@ where
     /// while traversing the page tables.
     fn do_walk_mut<PageWalkerMut, Error>(
         &self,
-        phys_addr: PTE,
+        phys_addr: u64,
         mut index: usize,
         range: Range<usize>,
         walker: &mut PageWalkerMut,
     ) -> Result<(), Error>
     where
-        PageWalkerMut: crate::walker::PageWalkerMut<PTE, Error>,
+        PageWalkerMut: crate::walker::PageWalkerMut<Error>,
     {
         // Ensure that the index is valid.
         if index >= self.levels.len() {
@@ -180,7 +173,7 @@ where
         for (pte_index, page_range) in page_ranges {
             // Get the PTE index for this page range, and then index into the page table to get the
             // corresponding PTE.
-            let offset: PTE = PTE::from_usize(pte_index * core::mem::size_of::<PTE>()).unwrap();
+            let offset = (pte_index * core::mem::size_of::<u64>()) as u64;
             let mut pte = walker.read_pte(phys_addr + offset)?;
 
             // Determine whether the PTE refers to a page or a page table. That is, it is a page if
@@ -228,12 +221,12 @@ where
     /// while traversing the page tables.
     pub fn walk_mut<PageWalkerMut, Error>(
         &self,
-        phys_addr: PTE,
+        phys_addr: u64,
         range: Range<usize>,
         walker: &mut PageWalkerMut,
     ) -> Result<(), Error>
     where
-        PageWalkerMut: crate::walker::PageWalkerMut<PTE, Error>,
+        PageWalkerMut: crate::walker::PageWalkerMut<Error>,
     {
         self.do_walk_mut(phys_addr, self.levels.len() - 1, range, walker)
     }

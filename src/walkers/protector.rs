@@ -5,46 +5,43 @@ use core::marker::PhantomData;
 use core::ops::Range;
 use crate::address_space::PageTableMapper;
 use crate::{PageFormat, PteType};
-use num_traits::{FromPrimitive, PrimInt, Unsigned};
 
 /// The [`PteProtector`] struct is an implementation of a [`crate::walker::PageWalkerMut`] used to
 /// change the protection flags of a given virtual address range. This function is used by the
 /// [`AddressSpace::protect_range`] method.
 ///
 /// [`AddressSpace::protect_range`]: `super::super::AddressSpace::protect_range`
-pub struct PteProtector<'a, PTE, Mapper, Error>
+pub struct PteProtector<'a, Mapper, Error>
 where
-    PTE: FromPrimitive + PrimInt + Unsigned,
-    Mapper: PageTableMapper<PTE, Error>,
+    Mapper: PageTableMapper<Error>,
 {
     /// The page table mapper.
     pub mapper: &'a mut Mapper,
     /// The protection flags that should be set. The first mask is the mask of bits that should be
     /// cleared. The second mask is the mask of bits that should be set.
-    pub mask: (PTE, PTE),
+    pub mask: (u64, u64),
     /// The page format.
-    pub format: &'a PageFormat<'a, PTE>,
+    pub format: &'a PageFormat<'a>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
 }
 
-impl<'a, PTE, Mapper, Error> crate::PageWalkerMut<PTE, Error> for PteProtector<'a, PTE, Mapper, Error>
+impl<'a, Mapper, Error> crate::PageWalkerMut<Error> for PteProtector<'a, Mapper, Error>
 where
-    PTE: FromPrimitive + PrimInt + Unsigned,
-    Mapper: PageTableMapper<PTE, Error>,
+    Mapper: PageTableMapper<Error>,
 {
     /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: PTE) -> Result<PTE, Error> {
+    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
         self.mapper.read_pte(phys_addr)
     }
 
     /// Writes the PTE to the given physical address.
-    fn write_pte(&mut self, phys_addr: PTE, value: PTE) -> Result<(), Error> {
+    fn write_pte(&mut self, phys_addr: u64, value: u64) -> Result<(), Error> {
         self.mapper.write_pte(phys_addr, value)
     }
 
     /// Checks if the PTE points to a page that is present, and changes the protection flags if so.
-    fn handle_pte(&mut self, pte_type: PteType, _range: Range<usize>, pte: &mut PTE) -> Result<(), Error> {
+    fn handle_pte(&mut self, pte_type: PteType, _range: Range<usize>, pte: &mut u64) -> Result<(), Error> {
         let physical_mask = self.format.physical_mask;
 
         if let PteType::Page(level) = pte_type {

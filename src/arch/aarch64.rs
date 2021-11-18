@@ -2,7 +2,7 @@
 use lazy_static::lazy_static;
 use crate::{PageFormat, PageLevel};
 
-static PAGE_LEVELS_4K: &'static [PageLevel<u64>] = &[
+static PAGE_LEVELS_4K: &'static [PageLevel] = &[
     PageLevel {
         shift_bits: 12,
         va_bits: 9,
@@ -40,7 +40,7 @@ lazy_static! {
     /// pages. Finally, while the number of physical address bits supported is CPU-specific, the
     /// maximum is 52 bits. This format is commonly used instead of `PAGE_FORMAT_4K_L4` to reduce
     /// the depth of the page table walk to improve the performance of virtual address translation.
-    pub static ref PAGE_FORMAT_4K_L3: PageFormat<'static, u64> = PageFormat {
+    pub static ref PAGE_FORMAT_4K_L3: PageFormat<'static> = PageFormat {
         levels: &PAGE_LEVELS_4K[0..3],
         physical_mask: 0x000f_ffff_ffff_f000,
     };
@@ -50,7 +50,7 @@ lazy_static! {
     /// address to index into the page table. Furthermore, it supports 2M huge pages and 1G huge
     /// pages. Finally, while the number of physical address bits supported is CPU-specific, the
     /// maximum is 52 bits.
-    pub static ref PAGE_FORMAT_4K_L4: PageFormat<'static, u64> = PageFormat {
+    pub static ref PAGE_FORMAT_4K_L4: PageFormat<'static> = PageFormat {
         levels: &PAGE_LEVELS_4K[0..3],
         physical_mask: 0x000f_ffff_ffff_f000,
     };
@@ -61,7 +61,7 @@ lazy_static! {
     /// instead only consists of two entries and only uses 1 bit of the virtual address to index
     /// into this page table. Finally, while the number of physical address bits supported is
     /// CPU-specific, the maximum is 52 bits. This page table format is rather exotic.
-    pub static ref PAGE_FORMAT_16K: PageFormat<'static, u64> = PageFormat {
+    pub static ref PAGE_FORMAT_16K: PageFormat<'static> = PageFormat {
         levels: &[
             PageLevel {
                 shift_bits: 12,
@@ -101,7 +101,7 @@ lazy_static! {
     /// instead only consists of 64 entries and only uses 6 bit of the virtual address to index
     /// into this page table. Finally, while the number of physical address bits supported is
     /// CPU-specific, the maximum is 52 bits. This page table format is rather exotic.
-    pub static ref PAGE_FORMAT_64K: PageFormat<'static, u64> = PageFormat {
+    pub static ref PAGE_FORMAT_64K: PageFormat<'static> = PageFormat {
         levels: &[
             PageLevel {
                 shift_bits: 12,

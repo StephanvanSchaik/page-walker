@@ -1,14 +1,9 @@
 //! This module provides the [`PageLevel`] struct used to describe a single level in a page table
 //! hierarchy. The full page table hierarchy is described by [`crate::format::PageFormat`].
 
-use num_traits::{PrimInt, Unsigned};
-
 /// Describes a single page level of the page hierarchy.
 #[derive(Clone, Debug)]
-pub struct PageLevel<PTE>
-where
-    PTE: PrimInt + Unsigned,
-{
+pub struct PageLevel {
     /// The number of bits to shift right in the virtual address to get the index bits for this
     /// page level.
     pub shift_bits: usize,
@@ -16,19 +11,16 @@ where
     pub va_bits: usize,
     /// The present bit in the PTE. The first mask is to select the relevants bits, the second is
     /// what the value should be upon masking.
-    pub present_bit: (PTE, PTE),
+    pub present_bit: (u64, u64),
     /// The huge page bit in the PTE. If the current page level does not support huge pages, then
     /// this should be set to zero. The first mask is to select the relevant bits, the second is
     /// what the value should be upon masking.
-    pub huge_page_bit: (PTE, PTE),
+    pub huge_page_bit: (u64, u64),
     /// The page table mask that should be set when allocating new page tables.
-    pub page_table_mask: PTE,
+    pub page_table_mask: u64,
 }
 
-impl<PTE> PageLevel<PTE>
-where
-    PTE: PrimInt + Unsigned,
-{
+impl PageLevel {
     /// Calculates the number of entries present in a page table for this page level.
     pub fn entries(&self) -> usize {
         1 << self.va_bits
@@ -59,14 +51,14 @@ where
     }
 
     /// Given a PTE, it checks if the PTE points to a present page or page table.
-    pub fn is_present(&self, pte: PTE) -> bool {
+    pub fn is_present(&self, pte: u64) -> bool {
         (pte & self.present_bit.0) == self.present_bit.1
     }
 
     /// Given a PTE, it checks if the PTE points to a huge page. Always returns `false` if the
     /// current page level does not support huge pages.
-    pub fn is_huge_page(&self, pte: PTE) -> bool {
-        if self.huge_page_bit.0 != PTE::zero() {
+    pub fn is_huge_page(&self, pte: u64) -> bool {
+        if self.huge_page_bit.0 != 0 {
             let mask = self.present_bit.0 | self.huge_page_bit.0;
             let value = self.present_bit.1 | self.huge_page_bit.1;
 

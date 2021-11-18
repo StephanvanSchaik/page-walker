@@ -12,7 +12,7 @@ pub const PAGE_USER:    u64 = 1 << 2;
 pub const PAGE_HUGE:    u64 = 1 << 7;
 
 
-static PAGE_LEVELS_4K: &'static [PageLevel<u64>] = &[
+static PAGE_LEVELS_4K: &'static [PageLevel] = &[
     PageLevel {
         shift_bits: 12,
         va_bits: 9,
@@ -56,7 +56,7 @@ lazy_static! {
     /// address to index into the page table. Furthermore, it supports 2M huge page and optionally
     /// 1G huge pages. Finally, while the number of physical address bits supported is
     /// CPU-specific, the maximum is 52 bits.
-    pub static ref PAGE_FORMAT_4K_L4: PageFormat<'static, u64> = PageFormat {
+    pub static ref PAGE_FORMAT_4K_L4: PageFormat<'static> = PageFormat {
         levels: &PAGE_LEVELS_4K[0..4],
         physical_mask: 0x000f_ffff_ffff_f000,
     };
@@ -66,15 +66,15 @@ lazy_static! {
     /// address to index into the page table. Furthermore, it supports 2M huge page and optionally
     /// 1G huge pages. Finally, while the number of physical address bits supported is
     /// CPU-specific, the maximum is 52 bits.
-    pub static ref PAGE_FORMAT_4K_L5: PageFormat<'static, u64> = PageFormat {
+    pub static ref PAGE_FORMAT_4K_L5: PageFormat<'static> = PageFormat {
         levels: PAGE_LEVELS_4K,
         physical_mask: 0x000f_ffff_ffff_f000,
     };
 
     /// The five-level page table layout is also known as LA57 as it expands linear or virtual
     /// addresses to 57 bits.
-    pub static ref PAGE_FORMAT_LA57: PageFormat<'static, u64> = PAGE_FORMAT_4K_L5.clone();
+    pub static ref PAGE_FORMAT_LA57: PageFormat<'static> = PAGE_FORMAT_4K_L5.clone();
 
     /// The default page format is a four-level page table hierarchy with 4K pages.
-    pub static ref DEFAULT_PAGE_FORMAT: PageFormat<'static, u64> = PAGE_FORMAT_4K_L4.clone();
+    pub static ref DEFAULT_PAGE_FORMAT: PageFormat<'static> = PAGE_FORMAT_4K_L4.clone();
 }

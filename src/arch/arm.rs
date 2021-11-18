@@ -7,7 +7,7 @@ lazy_static! {
     /// size of 4K. The leaf page table has 256 entries and uses 8 bits of the virtual address to
     /// index into the page table, whereas the root page table has 4096 entries and uses 12 bits of
     /// the virtual address to index into the page table. Furthermore, it supports 1M huge pages.
-    pub static ref PAGE_FORMAT_4K: PageFormat<'static, u32> = PageFormat {
+    pub static ref PAGE_FORMAT_4K: PageFormat<'static> = PageFormat {
         levels: &[
             PageLevel {
                 shift_bits: 12,
@@ -33,7 +33,7 @@ lazy_static! {
     /// table, except for the root page table. The root page table has four entries and uses 2 bits
     /// of the virtual address to index into the page table. Furthermore, it supports 2M huge
     /// pages and 1G huge pages.
-    pub static ref PAGE_FORMAT_4K_PAE: PageFormat<'static, u64> = PageFormat {
+    pub static ref PAGE_FORMAT_4K_PAE: PageFormat<'static> = PageFormat {
         levels: &[
             PageLevel {
                 shift_bits: 12,
@@ -61,5 +61,5 @@ lazy_static! {
     };
 
     /// The default page format is a two-level page table hierarchy with 4K pages.
-    pub static ref DEFAULT_PAGE_FORMAT: PageFormat<'static, u32> = PAGE_FORMAT_4K.clone();
+    pub static ref DEFAULT_PAGE_FORMAT: PageFormat<'static> = PAGE_FORMAT_4K.clone();
 }
