@@ -51,15 +51,17 @@ impl<'a> PageFormat<'a> {
     /// virtual address range and the given physical address of the page table for the current page
     /// table level. It invokes the appropriate user callbacks in [`crate::walker::PageWalker`],
     /// while traversing the page tables.
-    fn do_walk<PageWalker, Error>(
+    fn do_walk<PageWalker, Mapper, Error>(
         &self,
         phys_addr: u64,
         mut index: usize,
         range: Range<usize>,
         walker: &mut PageWalker,
+        mapper: &Mapper,
     ) -> Result<(), Error>
     where
-        PageWalker: crate::walker::PageWalker<Error>,
+        PageWalker: crate::walker::PageWalker<Mapper, Error>,
+        Mapper: crate::address_space::PageTableMapper<Error>,
     {
         // Ensure that the index is valid.
         if index >= self.levels.len() {
@@ -84,8 +86,8 @@ impl<'a> PageFormat<'a> {
         for (pte_index, page_range) in page_ranges {
             // Get the PTE index for this page range, and then index into the page table to get the
             // corresponding PTE.
-            let offset = (pte_index * core::mem::size_of::<u64>()) as u64;
-            let pte = walker.read_pte(phys_addr + offset)?;
+            let offset = (pte_index * self.pte_size) as u64;
+            let pte = mapper.read_pte(phys_addr + offset)?;
 
             // Determine whether the PTE refers to a page or a page table. That is, it is a page if
             // we are at a leaf page table or if the PTE refers to a huge page. Otherwise, it is a
@@ -96,12 +98,12 @@ impl<'a> PageFormat<'a> {
             };
 
             // Invoke the user callback to handle this PTE.
-            walker.handle_pte(page_type, page_range.clone(), &pte)?;
+            walker.handle_pte(mapper, page_type, page_range.clone(), &pte)?;
 
             // Invoke the user callback to handle this PTE hole, i.e. when the PTE is not marked as
             // present.
             if !level.is_present(pte) {
-                walker.handle_pte_hole(index, page_range.clone(), &pte)?;
+                walker.handle_pte_hole(mapper, index, page_range.clone(), &pte)?;
             }
 
             // If the user did not decide to unmap this page, then we are done with this PTE and
@@ -113,11 +115,11 @@ impl<'a> PageFormat<'a> {
             // At this point we are dealing with a normal page table. Extract the physical address
             // from the current PTE, and recurse the page table hierarchy.
             let phys_addr = pte & self.physical_mask;
-            self.do_walk(phys_addr, index - 1, page_range.clone(), walker)?;
+            self.do_walk(phys_addr, index - 1, page_range.clone(), walker, mapper)?;
 
             // Provide an opportunity to the user to handle the PTE of the page table upon
             // recursion. For instance, to free the page table.
-            walker.handle_post_pte(index, page_range, &pte)?;
+            walker.handle_post_pte(mapper, index, page_range, &pte)?;
         }
 
         Ok(())
@@ -127,31 +129,35 @@ impl<'a> PageFormat<'a> {
     /// address range and the given physical address of the root page table of the page table
     /// hierarchy. It invokes the appropriate user callbacks in [`crate::walker::PageWalker`],
     /// while traversing the page tables.
-    pub fn walk<PageWalker, Error>(
+    pub fn walk<PageWalker, Mapper, Error>(
         &self,
         phys_addr: u64,
         range: Range<usize>,
         walker: &mut PageWalker,
+        mapper: &Mapper,
     ) -> Result<(), Error>
     where
-        PageWalker: crate::walker::PageWalker<Error>,
+        PageWalker: crate::walker::PageWalker<Mapper, Error>,
+        Mapper: crate::address_space::PageTableMapper<Error>,
     {
-        self.do_walk(phys_addr, self.levels.len() - 1, range, walker)
+        self.do_walk(phys_addr, self.levels.len() - 1, range, walker, mapper)
     }
 
     /// This is a recursive helper function used to traverse the page table hierarchy for a given
     /// virtual address range and the given physical address of the page table for the current page
     /// table level. It invokes the appropriate user callbacks in [`crate::walker::PageWalkerMut`],
     /// while traversing the page tables.
-    fn do_walk_mut<PageWalkerMut, Error>(
+    fn do_walk_mut<PageWalkerMut, Mapper, Error>(
         &self,
         phys_addr: u64,
         mut index: usize,
         range: Range<usize>,
         walker: &mut PageWalkerMut,
+        mapper: &mut Mapper,
     ) -> Result<(), Error>
     where
-        PageWalkerMut: crate::walker::PageWalkerMut<Error>,
+        PageWalkerMut: crate::walker::PageWalkerMut<Mapper, Error>,
+        Mapper: crate::address_space::PageTableMapper<Error>,
     {
         // Ensure that the index is valid.
         if index >= self.levels.len() {
@@ -176,8 +182,8 @@ impl<'a> PageFormat<'a> {
         for (pte_index, page_range) in page_ranges {
             // Get the PTE index for this page range, and then index into the page table to get the
             // corresponding PTE.
-            let offset = (pte_index * core::mem::size_of::<u64>()) as u64;
-            let mut pte = walker.read_pte(phys_addr + offset)?;
+            let offset = (pte_index * self.pte_size) as u64;
+            let mut pte = mapper.read_pte(phys_addr + offset)?;
 
             // Determine whether the PTE refers to a page or a page table. That is, it is a page if
             // we are at a leaf page table or if the PTE refers to a huge page. Otherwise, it is a
@@ -188,17 +194,17 @@ impl<'a> PageFormat<'a> {
             };
 
             // Invoke the user callback to handle this PTE.
-            walker.handle_pte(page_type, page_range.clone(), &mut pte)?;
+            walker.handle_pte(mapper, page_type, page_range.clone(), &mut pte)?;
 
             // Invoke the user callback to handle this PTE hole, i.e. when the PTE is not marked as
             // present.
             if !level.is_present(pte) {
-                walker.handle_pte_hole(index, page_range.clone(), &mut pte)?;
+                walker.handle_pte_hole(mapper, index, page_range.clone(), &mut pte)?;
             }
 
             // If the user did not decide to unmap this page, then we are done with this PTE and
             // can resume to the next one.
-            walker.write_pte(phys_addr + offset, pte)?;
+            mapper.write_pte(phys_addr + offset, pte)?;
 
             if index == 0 || level.is_huge_page(pte) {
                 continue;
@@ -207,12 +213,12 @@ impl<'a> PageFormat<'a> {
             // At this point we are dealing with a normal page table. Extract the physical address
             // from the current PTE, and recurse the page table hierarchy.
             let phys_addr = pte & self.physical_mask;
-            self.do_walk_mut(phys_addr, index - 1, page_range.clone(), walker)?;
+            self.do_walk_mut(phys_addr, index - 1, page_range.clone(), walker, mapper)?;
 
             // Provide an opportunity to the user to handle the PTE of the page table upon
             // recursion. For instance, to free the page table.
-            walker.handle_post_pte(index, page_range, &mut pte)?;
-            walker.write_pte(phys_addr + offset, pte)?;
+            walker.handle_post_pte(mapper, index, page_range, &mut pte)?;
+            mapper.write_pte(phys_addr + offset, pte)?;
         }
 
         Ok(())
@@ -222,15 +228,17 @@ impl<'a> PageFormat<'a> {
     /// address range and the given physical address of the root page table of the page table
     /// hierarchy. It invokes the appropriate user callbacks in [`crate::walker::PageWalker`],
     /// while traversing the page tables.
-    pub fn walk_mut<PageWalkerMut, Error>(
+    pub fn walk_mut<PageWalkerMut, Mapper, Error>(
         &self,
         phys_addr: u64,
         range: Range<usize>,
         walker: &mut PageWalkerMut,
+        mapper: &mut Mapper,
     ) -> Result<(), Error>
     where
-        PageWalkerMut: crate::walker::PageWalkerMut<Error>,
+        PageWalkerMut: crate::walker::PageWalkerMut<Mapper, Error>,
+        Mapper: crate::address_space::PageTableMapper<Error>,
     {
-        self.do_walk_mut(phys_addr, self.levels.len() - 1, range, walker)
+        self.do_walk_mut(phys_addr, self.levels.len() - 1, range, walker, mapper)
     }
 }

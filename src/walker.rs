@@ -56,15 +56,16 @@ impl PteType {
 /// invoke the appropriate user callbacks, such that the user can provide an implementation for
 /// interacting with the various PTEs during the page table walk. For the mutable version, see
 /// [`crate::format::PageFormat::walk_mut`] and [`PageWalkerMut`].
-pub trait PageWalker<Error> {
-    /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error>;
-
+pub trait PageWalker<Mapper, Error>
+where
+    Mapper: crate::address_space::PageTableMapper<Error>,
+{
     /// This callback handles the current PTE unconditionally and is given the [`PteType`], the
     /// virtual address range and an immutable reference to the PTE. The implementation of this
     /// callback is optional.
     fn handle_pte(
         &mut self,
+        _mapper: &Mapper,
         _page_type: PteType,
         _range: Range<usize>,
         _pte: &u64,
@@ -77,6 +78,7 @@ pub trait PageWalker<Error> {
     /// implementation of this callback is optional.
     fn handle_pte_hole(
         &mut self,
+        _mapper: &Mapper,
         _level: usize,
         _range: Range<usize>,
         _pte: &u64,
@@ -89,6 +91,7 @@ pub trait PageWalker<Error> {
     /// implementation of this callback is optional.
     fn handle_post_pte(
         &mut self,
+        _mapper: &Mapper,
         _level: usize,
         _range: Range<usize>,
         _pte: &u64,
@@ -101,18 +104,16 @@ pub trait PageWalker<Error> {
 /// to invoke the appropriate user callbacks, such that the user can provide an implementation for
 /// interacting with the various PTEs during the page table walk. For the immutable version, see
 /// [`crate::format::PageFormat::walk`] and [`PageWalker`].
-pub trait PageWalkerMut<Error> {
-    /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error>;
-
-    /// Writes the PTE to the given physical address.
-    fn write_pte(&mut self, phys_addr: u64, value: u64) -> Result<(), Error>;
-
+pub trait PageWalkerMut<Mapper, Error>
+where
+    Mapper: crate::address_space::PageTableMapper<Error>,
+{
     /// This callback handles the current PTE unconditionally and is given the [`PteType`], the
     /// virtual address range and a mutable reference to the PTE. The implementation of this
     /// callback is optional.
     fn handle_pte(
         &mut self,
+        _mapper: &mut Mapper,
         _page_type: PteType,
         _range: Range<usize>,
         _pte: &mut u64,
@@ -125,6 +126,7 @@ pub trait PageWalkerMut<Error> {
     /// implementation of this callback is optional.
     fn handle_pte_hole(
         &mut self,
+        _mapper: &mut Mapper,
         _level: usize,
         _range: Range<usize>,
         _pte: &mut u64,
@@ -137,6 +139,7 @@ pub trait PageWalkerMut<Error> {
     /// implementation of this callback is optional.
     fn handle_post_pte(
         &mut self,
+        _mapper: &mut Mapper,
         _level: usize,
         _range: Range<usize>,
         _pte: &mut u64,

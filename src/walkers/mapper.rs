@@ -15,33 +15,23 @@ pub struct PteMapper<'a, Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// The page table mapper.
-    pub mapper: &'a mut Mapper,
     /// The page format.
     pub format: &'a PageFormat<'a>,
     /// The mask to set for pages.
     pub mask: u64,
     /// A marker for Error.
     pub error: PhantomData<Error>,
+    /// A marker for Mapper.
+    pub mapper: PhantomData<Mapper>,
 }
 
-impl<'a, Mapper, Error> crate::PageWalkerMut<Error> for PteMapper<'a, Mapper, Error>
+impl<'a, Mapper, Error> crate::PageWalkerMut<Mapper, Error> for PteMapper<'a, Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
-        self.mapper.read_pte(phys_addr)
-    }
-
-    /// Writes the PTE to the given physical address.
-    fn write_pte(&mut self, phys_addr: u64, value: u64) -> Result<(), Error> {
-        self.mapper.write_pte(phys_addr, value)
-    }
-
     /// Allocates the page or page table for the current level as we are handling PTE holes. If the
     /// mask is set to None, then this function only allocates page tables.
-    fn handle_pte_hole(&mut self, index: usize, _range: Range<usize>, pte: &mut u64) -> Result<(), Error> {
+    fn handle_pte_hole(&mut self, mapper: &mut Mapper, index: usize, _range: Range<usize>, pte: &mut u64) -> Result<(), Error> {
         let level = &self.format.levels[index];
 
         match index {
@@ -51,7 +41,7 @@ where
                 self.mask = self.mask + level.page_size() as u64;
             }
             _ => {
-                let page_table = self.mapper.alloc_page()?;
+                let page_table = mapper.alloc_page()?;
 
                 // Mark the page table as present, set the page table mask and ensure it is
                 // **not** a huge page.

@@ -28,32 +28,22 @@ pub struct PteRemover<'a, Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// The page table mapper.
-    pub mapper: &'a mut Mapper,
     /// Flags to configure the behavior.
     pub flags: PteRemovalFlags,
     /// The page format.
     pub format: &'a PageFormat<'a>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
+    /// A marker for Mapper.
+    pub mapper: PhantomData<Mapper>,
 }
 
-impl<'a, Mapper, Error> crate::PageWalkerMut<Error> for PteRemover<'a, Mapper, Error>
+impl<'a, Mapper, Error> crate::PageWalkerMut<Mapper, Error> for PteRemover<'a, Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
-        self.mapper.read_pte(phys_addr)
-    }
-
-    /// Writes the PTE to the given physical address.
-    fn write_pte(&mut self, phys_addr: u64, value: u64) -> Result<(), Error> {
-        self.mapper.write_pte(phys_addr, value)
-    }
-
     /// Frees the page if the PTE points to a present page and zeroes the PTE afterwards.
-    fn handle_pte(&mut self, pte_type: PteType, _range: Range<usize>, pte: &mut u64) -> Result<(), Error> {
+    fn handle_pte(&mut self, mapper: &mut Mapper, pte_type: PteType, _range: Range<usize>, pte: &mut u64) -> Result<(), Error> {
         let physical_mask = self.format.physical_mask;
 
         if let PteType::Page(level) = pte_type {
@@ -62,7 +52,7 @@ where
             if level.is_present(*pte) {
                 // Free the page and mark the PTE as non-present.
                 if self.flags.contains(PteRemovalFlags::FREE_PAGES) {
-                    self.mapper.free_page(physical_mask & *pte);
+                    mapper.free_page(physical_mask & *pte);
                 }
 
                 *pte = 0;
@@ -74,22 +64,23 @@ where
 
     /// Maps in the page table to check if all entries have been cleared. If so, this function
     /// frees the page table.
-    fn handle_post_pte(&mut self, index: usize, _range: Range<usize>, pte: &mut u64) -> Result<(), Error> {
+    fn handle_post_pte(&mut self, mapper: &mut Mapper, index: usize, _range: Range<usize>, pte: &mut u64) -> Result<(), Error> {
         let level = &self.format.levels[index];
         let physical_mask = self.format.physical_mask;
         let phys_addr = physical_mask & *pte;
 
         // Check if all entries have been cleared.
         for i in 0..level.entries() {
+            // FIXME: we need the PageFormat here.
             let offset: u64 = (i * core::mem::size_of::<u64>()) as u64;
 
-            if self.read_pte(phys_addr + offset)? != 0 {
+            if mapper.read_pte(phys_addr + offset)? != 0 {
                 return Ok(());
             }
         }
 
         if self.flags.contains(PteRemovalFlags::FREE_PAGE_TABLES) {
-            self.mapper.free_page(physical_mask & *pte);
+            mapper.free_page(physical_mask & *pte);
             *pte = 0;
         }
 

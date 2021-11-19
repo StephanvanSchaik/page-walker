@@ -81,12 +81,12 @@ where
     /// Reads the PTE for the given the virtual address if the virtual address is valid.
     pub fn read_pte(&self, virt_addr: usize) -> Result<u64, Error> {
         let mut walker = PteReader {
-            mapper: self.mapper,
             pte: None,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk(self.root, virt_addr..virt_addr + 1, &mut walker)?;
+        self.format.walk(self.root, virt_addr..virt_addr + 1, &mut walker, self.mapper)?;
 
         match walker.pte {
             Some(pte) => Ok(pte),
@@ -97,12 +97,12 @@ where
     /// Writes the PTE for the given virtual address if the virtual address is valid.
     pub fn write_pte(&mut self, virt_addr: usize, pte: u64) -> Result<(), Error> {
         let mut walker = PteWriter {
-            mapper: self.mapper,
             pte,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk_mut(self.root, virt_addr..virt_addr + 1, &mut walker)?;
+        self.format.walk_mut(self.root, virt_addr..virt_addr + 1, &mut walker, self.mapper)?;
 
         Ok(())
     }
@@ -111,13 +111,13 @@ where
     /// space. The pages are protected using the given mask.
     pub fn allocate_range(&mut self, range: Range<usize>, mask: u64) -> Result<(), Error> {
         let mut walker = PteAllocator {
-            mapper: self.mapper,
             mask: Some(mask),
             format: &self.format,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk_mut(self.root, range, &mut walker)?;
+        self.format.walk_mut(self.root, range, &mut walker, self.mapper)?;
 
         Ok(())
     }
@@ -127,13 +127,13 @@ where
     /// for memory-mapped I/O.
     pub fn map_range(&mut self, range: Range<usize>, mask: u64) -> Result<(), Error> {
         let mut walker = PteMapper {
-            mapper: self.mapper,
             mask,
             format: &self.format,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk_mut(self.root, range, &mut walker)?;
+        self.format.walk_mut(self.root, range, &mut walker, self.mapper)?;
 
         Ok(())
     }
@@ -143,13 +143,13 @@ where
     /// should be set.
     pub fn protect_range(&mut self, range: Range<usize>, mask: (u64, u64)) -> Result<(), Error> {
         let mut walker = PteProtector {
-            mapper: self.mapper,
             mask,
             format: &self.format,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk_mut(self.root, range, &mut walker)?;
+        self.format.walk_mut(self.root, range, &mut walker, self.mapper)?;
 
         Ok(())
     }
@@ -160,13 +160,13 @@ where
         let flags = PteRemovalFlags::all();
 
         let mut walker = PteRemover {
-            mapper: self.mapper,
             flags,
             format: &self.format,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk_mut(self.root, range, &mut walker)?;
+        self.format.walk_mut(self.root, range, &mut walker, self.mapper)?;
 
         Ok(())
     }
@@ -177,13 +177,13 @@ where
         let flags = PteRemovalFlags::empty();
 
         let mut walker = PteRemover {
-            mapper: self.mapper,
             flags,
             format: &self.format,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk_mut(self.root, range, &mut walker)?;
+        self.format.walk_mut(self.root, range, &mut walker, self.mapper)?;
 
         Ok(())
     }
@@ -193,14 +193,14 @@ where
         let range = address..address + data.len();
 
         let mut walker = CopyFromWalker {
-            mapper: self.mapper,
             offset: 0,
             data,
             format: &self.format,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk(self.root, range, &mut walker)?;
+        self.format.walk(self.root, range, &mut walker, self.mapper)?;
 
         Ok(())
     }
@@ -210,14 +210,14 @@ where
         let range = address..address + data.len();
 
         let mut walker = CopyToWalker {
-            mapper: self.mapper,
             offset: 0,
             data,
             format: &self.format,
             error: PhantomData,
+            mapper: PhantomData,
         };
 
-        self.format.walk(self.root, range, &mut walker)?;
+        self.format.walk_mut(self.root, range, &mut walker, self.mapper)?;
 
         Ok(())
     }

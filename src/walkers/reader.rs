@@ -11,29 +11,24 @@ use crate::PteType;
 /// method.
 ///
 /// [`AddressSpace::read_pte`]: `super::super::AddressSpace::read_pte`
-pub struct PteReader<'a, Mapper, Error>
+pub struct PteReader<Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// The page table mapper.
-    pub mapper: &'a Mapper,
     /// Storage for the retrieved PTE.
     pub pte: Option<u64>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
+    /// A marker for Mapper.
+    pub mapper: PhantomData<Mapper>,
 }
 
-impl<'a, Mapper, Error> crate::PageWalker<Error> for PteReader<'a, Mapper, Error>
+impl<Mapper, Error> crate::PageWalker<Mapper, Error> for PteReader<Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
-        self.mapper.read_pte(phys_addr)
-    }
-
     /// Stores the PTE of the page, if the virtual address resolves to a page.
-    fn handle_pte(&mut self, pte_type: PteType, _range: Range<usize>, pte: &u64) -> Result<(), Error> {
+    fn handle_pte(&mut self, _mapper: &Mapper, pte_type: PteType, _range: Range<usize>, pte: &u64) -> Result<(), Error> {
         if pte_type.is_page() {
             self.pte = Some(*pte);
         }

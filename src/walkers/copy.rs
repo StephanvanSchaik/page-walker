@@ -15,8 +15,6 @@ pub struct CopyFromWalker<'a, Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// The page table mapper.
-    pub mapper: &'a Mapper,
     /// The offset within the buffer.
     pub offset: usize,
     /// Storage for the copied data.
@@ -25,19 +23,16 @@ where
     pub format: &'a PageFormat<'a>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
+    /// A marker for Mapper.
+    pub mapper: PhantomData<Mapper>,
 }
 
-impl<'a, Mapper, Error> crate::PageWalker<Error> for CopyFromWalker<'a, Mapper, Error>
+impl<'a, Mapper, Error> crate::PageWalker<Mapper, Error> for CopyFromWalker<'a, Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
-        self.mapper.read_pte(phys_addr)
-    }
-
     /// Maps the page and copies the data to the buffer.
-    fn handle_pte(&mut self, pte_type: PteType, range: Range<usize>, pte: &u64) -> Result<(), Error> {
+    fn handle_pte(&mut self, mapper: &Mapper, pte_type: PteType, range: Range<usize>, pte: &u64) -> Result<(), Error> {
         let level = match pte_type {
             PteType::Page(level) => level,
             _ => return Ok(()),
@@ -59,7 +54,7 @@ where
         let size = (self.data.len() - self.offset).min(level.page_size());
 
         // Copy the bytes.
-        self.mapper.read_bytes(&mut self.data[self.offset..self.offset + size], phys_addr + offset)?;
+        mapper.read_bytes(&mut self.data[self.offset..self.offset + size], phys_addr + offset)?;
         self.offset += size;
 
         Ok(())
@@ -76,8 +71,6 @@ pub struct CopyToWalker<'a, Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// The page table mapper.
-    pub mapper: &'a mut Mapper,
     /// The offset within the buffer.
     pub offset: usize,
     /// Storage for the data to copy.
@@ -86,19 +79,16 @@ where
     pub format: &'a PageFormat<'a>,
     /// A marker for Error.
     pub error: PhantomData<Error>,
+    /// A marker for Mapper.
+    pub mapper: PhantomData<Mapper>,
 }
 
-impl<'a, Mapper, Error> crate::PageWalker<Error> for CopyToWalker<'a, Mapper, Error>
+impl<'a, Mapper, Error> crate::PageWalkerMut<Mapper, Error> for CopyToWalker<'a, Mapper, Error>
 where
     Mapper: PageTableMapper<Error>,
 {
-    /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
-        self.mapper.read_pte(phys_addr)
-    }
-
     /// Maps the page and copies the data from the buffer.
-    fn handle_pte(&mut self, pte_type: PteType, range: Range<usize>, pte: &u64) -> Result<(), Error> {
+    fn handle_pte(&mut self, mapper: &mut Mapper, pte_type: PteType, range: Range<usize>, pte: &mut u64) -> Result<(), Error> {
         let level = match pte_type {
             PteType::Page(level) => level,
             _ => return Ok(()),
@@ -120,7 +110,7 @@ where
         let size = (self.data.len() - self.offset).min(level.page_size());
 
         // Copy the bytes.
-        self.mapper.write_bytes(phys_addr + offset, &self.data[self.offset..self.offset + size])?;
+        mapper.write_bytes(phys_addr + offset, &self.data[self.offset..self.offset + size])?;
         self.offset += size;
 
         Ok(())
