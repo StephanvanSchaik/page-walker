@@ -19,17 +19,37 @@ pub trait PageTableMapper<Error> {
     const NOT_IMPLEMENTED: Error;
 
     /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
-        let mut bytes = [0u8; 8];
-        self.read_bytes(&mut bytes, phys_addr)?;
-        Ok(u64::from_ne_bytes(bytes))
+    fn read_pte(&self, pte_size: usize, phys_addr: u64) -> Result<u64, Error> {
+        match pte_size {
+            8 => {
+                let mut bytes = [0u8; 8];
+                self.read_bytes(&mut bytes, phys_addr)?;
+                Ok(u64::from_ne_bytes(bytes))
+            }
+            4 => {
+                let mut bytes = [0u8; 4];
+                self.read_bytes(&mut bytes, phys_addr)?;
+                Ok(u32::from_ne_bytes(bytes) as u64)
+            }
+            _ => Err(Self::NOT_IMPLEMENTED)
+        }
     }
 
     /// Writes the PTE to the given physical address.
-    fn write_pte(&mut self, phys_addr: u64, value: u64) -> Result<(), Error> {
-        let bytes = u64::to_ne_bytes(value);
-        self.write_bytes(phys_addr, &bytes)?;
-        Ok(())
+    fn write_pte(&mut self, pte_size: usize, phys_addr: u64, value: u64) -> Result<(), Error> {
+        match pte_size {
+            8 => {
+                let bytes = u64::to_ne_bytes(value);
+                self.write_bytes(phys_addr, &bytes)?;
+                Ok(())
+            }
+            4 => {
+                let bytes = u32::to_ne_bytes(value as u32);
+                self.write_bytes(phys_addr, &bytes)?;
+                Ok(())
+            }
+            _ => Err(Self::NOT_IMPLEMENTED),
+        }
     }
 
     /// Reads the bytes from the given physical address.

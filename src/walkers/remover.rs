@@ -71,10 +71,9 @@ where
 
         // Check if all entries have been cleared.
         for i in 0..level.entries() {
-            // FIXME: we need the PageFormat here.
-            let offset: u64 = (i * core::mem::size_of::<u64>()) as u64;
+            let offset: u64 = (i * self.format.pte_size) as u64;
 
-            if mapper.read_pte(phys_addr + offset)? != 0 {
+            if mapper.read_pte(self.format.pte_size, phys_addr + offset)? != 0 {
                 return Ok(());
             }
         }

@@ -87,7 +87,7 @@ impl<'a> PageFormat<'a> {
             // Get the PTE index for this page range, and then index into the page table to get the
             // corresponding PTE.
             let offset = (pte_index * self.pte_size) as u64;
-            let pte = mapper.read_pte(phys_addr + offset)?;
+            let pte = mapper.read_pte(self.pte_size, phys_addr + offset)?;
 
             // Determine whether the PTE refers to a page or a page table. That is, it is a page if
             // we are at a leaf page table or if the PTE refers to a huge page. Otherwise, it is a
@@ -183,7 +183,7 @@ impl<'a> PageFormat<'a> {
             // Get the PTE index for this page range, and then index into the page table to get the
             // corresponding PTE.
             let offset = (pte_index * self.pte_size) as u64;
-            let mut pte = mapper.read_pte(phys_addr + offset)?;
+            let mut pte = mapper.read_pte(self.pte_size, phys_addr + offset)?;
 
             // Determine whether the PTE refers to a page or a page table. That is, it is a page if
             // we are at a leaf page table or if the PTE refers to a huge page. Otherwise, it is a
@@ -204,7 +204,7 @@ impl<'a> PageFormat<'a> {
 
             // If the user did not decide to unmap this page, then we are done with this PTE and
             // can resume to the next one.
-            mapper.write_pte(phys_addr + offset, pte)?;
+            mapper.write_pte(self.pte_size, phys_addr + offset, pte)?;
 
             if index == 0 || level.is_huge_page(pte) {
                 continue;
@@ -218,7 +218,7 @@ impl<'a> PageFormat<'a> {
             // Provide an opportunity to the user to handle the PTE of the page table upon
             // recursion. For instance, to free the page table.
             walker.handle_post_pte(mapper, index, page_range, &mut pte)?;
-            mapper.write_pte(phys_addr + offset, pte)?;
+            mapper.write_pte(self.pte_size, phys_addr + offset, pte)?;
         }
 
         Ok(())
