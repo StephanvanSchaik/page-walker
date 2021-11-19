@@ -19,10 +19,18 @@ pub trait PageTableMapper<Error> {
     const NOT_IMPLEMENTED: Error;
 
     /// Reads the PTE at the given physical address.
-    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error>;
+    fn read_pte(&self, phys_addr: u64) -> Result<u64, Error> {
+        let mut bytes = [0u8; 8];
+        self.read_bytes(&mut bytes, phys_addr)?;
+        Ok(u64::from_ne_bytes(bytes))
+    }
 
     /// Writes the PTE to the given physical address.
-    fn write_pte(&mut self, phys_addr: u64, value: u64) -> Result<(), Error>;
+    fn write_pte(&mut self, phys_addr: u64, value: u64) -> Result<(), Error> {
+        let bytes = u64::to_ne_bytes(value);
+        self.write_bytes(phys_addr, &bytes)?;
+        Ok(())
+    }
 
     /// Reads the bytes from the given physical address.
     fn read_bytes(&self, _bytes: &mut [u8], _phys_addr: u64) -> Result<usize, Error> {
